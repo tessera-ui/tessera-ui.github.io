@@ -4,7 +4,7 @@
     "@types/node": "^25.0.2",
     "prettier": "3.7.4",
     "vitepress": "^2.0.0-alpha.8",
-    "vitepress-i18n": "^1.3.4",
+    "vitepress-i18n": "^1.3.5",
     "vitepress-sidebar": "^1.33.0"
   },
   "scripts": {
@@ -13,6 +13,6 @@
     "docs:preview": "vitepress preview docs"
   },
   "dependencies": {
-    "lucide-vue-next": "^0.561.0"
+    "lucide-vue-next": "^0.562.0"
   }
 }
