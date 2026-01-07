@@ -89,6 +89,7 @@ const vitePressSidebarConfigs = supportedLocales.map((lang) => ({
 }));
 
 const vitePressI18nConfig: VitePressI18nOptions = {
+  searchProvider: "local",
   // VitePress I18n config
   locales: ["en", "zhHans"],
   themeConfig: {
