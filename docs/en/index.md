@@ -2,8 +2,8 @@
 layout: home
 
 hero:
-  text: "<span class='rotating-words'><span>Declarative</span><span>Immediate-mode</span><span>Parallelized</span><span>Cross-platform</span><span>Shader-first</span></span><br>UI framework for Rust"
-  tagline: "Build next-generation interfaces with GPU-first performance and a modern, ergonomic component model."
+  text: "Tessera UI"
+  tagline: "A cross-platform declarative & functional UI library, focused on performance and extensibility."
   actions:
     - theme: brand
       text: Get Started
@@ -17,15 +17,15 @@ hero:
 
 features:
   - icon: 🧩
-    title: Declarative Component Model
-    details: Define and compose components using simple functions with the <code>&#35;[tessera]</code> macro, resulting in clean and intuitive code.
+    title: Functional & Declarative
+    details: Annotate functions with <code>&#35;[tessera]</code> to define and compose components concisely.
   - icon: 📐
-    title: Powerful and Flexible Layout System
-    details: A constraint-based layout engine (Fixed, Wrap, Fill) plus components like <code>row</code>, <code>boxed</code>, and <code>column</code> make responsive layouts effortless.
+    title: Parallelized Layout
+    details: A constraint-based, side-effect-free, parallel layout system with automatic caching for high performance and low overhead; capable of arbitrary layouts.
   - icon: 🎨
-    title: Shader-first
-    details: Shaders are first-class citizens in Tessera. Implement custom effects at any stage, or harness the GPU for general-purpose computing.
-  - icon: 🖥️
-    title: Cross-Platform
-    details: built on wgpu and winit, supporting Windows, Linux, macOS, and more.
+    title: Plugin-based Rendering
+    details: A plugin-driven rendering system powered by wgpu that makes it easy to insert new render pipelines and shaders.
+  - icon: ⚡
+    title: Immediate-mode
+    details: Tessera is an immediate-mode UI framework, eliminating complex state synchronization issues while using layout caching to reduce overhead.
 ---
