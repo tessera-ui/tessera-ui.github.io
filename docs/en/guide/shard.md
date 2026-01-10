@@ -1,6 +1,6 @@
 ---
 title: Shards and Navigation
-order: 3
+order: 2
 ---
 
 # Shards and Navigation
