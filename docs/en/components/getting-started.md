@@ -23,7 +23,7 @@ cargo add tessera-ui-basic-components
 If you do not register the corresponding pipelines with the renderer, the renderer will crash.
 :::
 
-`tessera-ui` uses a decentralized renderer architecture (see ../guide/what-is-tessera.md#pluggable-shaders), so you need to register `tessera-ui-basic-components` with the renderer.
+`tessera-ui` uses a decentralized renderer architecture, so you need to register `tessera-ui-basic-components` with the renderer.
 
 Assume your original renderer initialization looks like:
 

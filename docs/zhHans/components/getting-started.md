@@ -23,7 +23,7 @@ cargo add tessera-ui-basic-components
 如果不注册对应管线到渲染器中，渲染器将直接崩溃。
 :::
 
-`tessera-ui` [使用去中心化的渲染器架构](../guide/what-is-tessera.md#可插拔着色器)，所以你需要将 `tessera-ui-basic-components` 注册到渲染器中。
+`tessera-ui` 使用去中心化的渲染器架构，所以你需要将 `tessera-ui-basic-components` 注册到渲染器中。
 
 假设你原来的渲染器初始化代码如下：
 
