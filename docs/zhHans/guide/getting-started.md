@@ -76,7 +76,7 @@ pub fn app() {
 
 ### 添加文本
 
-接下来我们在背景上添加一个文本组件，显示"Hello, Tessera!"。
+接下来我们在背景上添加一个文本组件，显示"Hello Tessera!"。
 
 ```rust
 #[tessera]
@@ -92,7 +92,7 @@ pub fn app() {
 }
 ```
 
-当开发服务器再次重建完成，就可以看到一个白色的窗口和黑色的"Hello, World!"文本。
+当开发服务器再次重建完成，就可以看到一个白色的窗口和黑色的"Hello Tessera!"文本。
 
 ![hello](/getting-start-3.png)
 
