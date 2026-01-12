@@ -5,164 +5,410 @@ order: 1
 
 # Component
 
-In `tessera`, a component is the basic building block of the user interface. It allows developers to create complex UIs by composing these components.
+This chapter explains how to declare components in `tessera` and common usage patterns.
 
-`tessera` expresses components as functions, usually by marking functions with the `#[tessera]` macro. Below we also refer to components as "tessera".
+It assumes basic familiarity with Rust. If you're new to Rust, consider reading [The Rust Programming Language](https://doc.rust-lang.org/book/).
 
-## Defining components
+## Component declaration
 
-Defining a component is very simple: just create a function and mark it with the `#[tessera]` macro — it becomes a `tessera` component.
+Mark a free function with the `#[tessera]` procedural macro to declare a component:
 
 ```rust
 use tessera_ui::tessera;
 
 #[tessera]
-fn component() {
-
+fn app() {
+    // component content
 }
 ```
 
-Component functions can accept parameters with no special restrictions. As mentioned above, a component function is fundamentally an ordinary Rust function.
-
-```rust
-use tessera_ui::tessera;
-use tessera_ui_basic_components::text::text;
-
-#[tessera]
-fn component(name: String, age: u32) {
-    text(format!("Hello, {}! You are {} years old.", name, age));
-}
-```
-
-## Composition
-
-To compose components, simply call one component function from another component function.
+Components can be nested simply by calling other component functions inside a component:
 
 ```rust
 use tessera_ui::tessera;
 
 #[tessera]
-fn parent_component() {
-    child_component();
+fn child() {
+    // child content
 }
 
 #[tessera]
-fn child_component() {
-    // child component content
-}
-```
-
-By default, this renders the child component at the top-left corner of the parent. For more advanced layouts see the "measure-place" layout system below.
-
-## Container
-
-Often we don't know what the child component will be and cannot call it directly. In such cases we can pass the child as a closure.
-
-```rust
-use tessera_ui::tessera;
-
-#[tessera]
-fn parent_component(child: impl FnOnce()) {
+fn parent() {
     child();
 }
+```
+
+## Containers
+
+When a component needs to accept arbitrary children, receive them as a closure parameter:
+
+```rust
+use tessera_ui::tessera;
+use tessera_components::{
+    surface::{SurfaceArgs, surface},
+    text::text,
+};
 
 #[tessera]
-fn child_component() {
-    // child component content
+fn container<F>(child: F)
+where
+    F: FnOnce() + Send + Sync + 'static,
+{
+    surface(SurfaceArgs::default(), || {
+        child();
+    });
 }
 
+#[tessera]
 fn app() {
-    parent_component(|| {
-        child_component();
+    container(|| text("Hello from container!"));
+}
+```
+
+Note: non-component functions (including plain closures) that are not annotated with `#[tessera]` are transparent to the component model. They do not create new component boundaries—child components called inside them are considered direct children of the original component. This allows using ordinary functions and closures for layout and logic organization without affecting the component tree.
+
+```rust
+use tessera_ui::tessera;
+
+#[tessera]
+fn app() {
+    container(|| {
+        helper();
+    });
+}
+
+fn helper() {
+    foo1();
+    foo2();
+}
+
+#[tessera]
+fn foo1() {
+    // counter implementation
+}
+
+#[tessera]
+fn foo2() {
+    // counter implementation
+}
+```
+
+In the example above, `helper` is not a component, so `foo1` and `foo2` are treated as direct children of `app`.
+
+## State: remember, retain, context
+
+`tessera` provides primitives to persist state inside components. They have different lifetimes and capabilities but a consistent usage pattern:
+
+- `remember`: store a value as long as the component is visible
+- `retain`: store a value for the whole process lifetime
+- `context`: similar lifetime to `remember`, but can be propagated to arbitrarily deep child components
+
+### remember
+
+`remember` is used for short-lived component state. It's the most commonly used primitive. Example: a simple counter.
+
+```rust
+use tessera_ui::tessera;
+
+#[tessera]
+fn counter() {
+    let count = remember(|| 0);
+    surface(
+        SurfaceArgs::default().modifier(Modifier::new().fill_max_size()),
+        move || {
+            column(ColumnArgs::default(), |scope| {
+                scope.child(move || {
+                    button(
+                        ButtonArgs::filled(move || count.with_mut(|count| *count += 1)),
+                        || text("+"),
+                    )
+                });
+                scope.child(move || text(format!("count {}", count.get())));
+            });
+        },
+    );
+}
+```
+
+`count` is preserved across re-renders of the component.
+
+### retain
+
+`retain` stores long-lived state and is useful for things that should survive when a component is not visible, e.g., scroll positions or text input. Prefer `remember` unless you really need process-lifetime persistence.
+
+Below is an example showing how `retain` can be used to keep `LazyListController` instances so each page remembers its scroll position when switching.
+
+```rust
+#[tessera]
+pub fn app() {
+    surface(SurfaceArgs::default(), || {
+        column(
+            ColumnArgs::default().modifier(Modifier::new().fill_max_size()),
+            move |scope| {
+                let first = remember(|| false);
+                scope.child(move || {
+                    button(
+                        ButtonArgs::filled(move || first.set(!first.get())),
+                        move || text("Switch"),
+                    );
+                });
+
+                scope.child(move || {
+                    if first.get() {
+                        let controller = retain(|| LazyListController::new());
+                        lazy_column_with_controller(
+                            LazyColumnArgs::default().content_padding(Dp(5.0)),
+                            controller,
+                            |scope| {
+                                for i in 0..100 {
+                                    scope.item(move || {
+                                        card(CardArgs::default(), move |_| {
+                                            text(
+                                                TextArgs::default()
+                                                    .modifier(Modifier::new().padding_all(Dp(16.0)))
+                                                    .text(i.to_string()),
+                                            );
+                                        })
+                                    });
+                                }
+                            },
+                        );
+                    } else {
+                        let controller = retain(|| LazyListController::new());
+                        lazy_column_with_controller(
+                            LazyColumnArgs::default().content_padding(Dp(5.0)),
+                            controller,
+                            |scope| {
+                                for i in 0..100 {
+                                    scope.item(move || {
+                                        card(CardArgs::default(), move |_| {
+                                            text(
+                                                TextArgs::default()
+                                                    .modifier(Modifier::new().padding_all(Dp(16.0)))
+                                                    .text(i.to_string()),
+                                            );
+                                        })
+                                    });
+                                }
+                            },
+                        );
+                    }
+                });
+            },
+        );
     });
 }
 ```
 
-Such components are called containers.
+### context
 
-## Measure - Place
-
-For more complex layouts you need to dive into tessera's measure-place layout system.
-
-Tessera's layout system is split into two phases: measure and place. The measure phase determines the component's size, while the place phase determines the component's position on the screen.
-
-### Custom layout
-
-To override the default measurement behavior, call the `measure` function inside the component and provide a closure:
+`context` lets you provide a value that can be retrieved by any descendant component. It's useful for cross-cutting data such as theme or user info.
 
 ```rust
-use tessera_ui::tessera;
+#[derive(Clone)]
+struct Theme {
+    color: Color,
+}
 
 #[tessera]
-fn component() {
-    measure(Box::new(|input| {
-        // measurement logic here
-    }))
+pub fn app() {
+    surface(SurfaceArgs::default(), || {
+        provide_context(|| Theme { color: Color::BLUE }, || mid())
+    });
+}
+
+#[tessera]
+fn mid() {
+    Modifier::new().padding_all(Dp(16.0)).run(|| leaf());
+}
+
+#[tessera]
+fn leaf() {
+    let color = use_context::<Theme>().unwrap().get().color;
+    surface(SurfaceArgs::default().style(color.into()), || {});
 }
 ```
 
-The `measure` function accepts a closure that receives a `MeasureInput` and returns a `Size`. Its type is defined as:
+`app` provides a `Theme` via `provide_context`. `leaf` retrieves it with `use_context`, while `mid` doesn't need to know about the theme.
 
-```rust
-pub type MeasureFn =
-    dyn Fn(&MeasureInput<'_>) -> Result<ComputedData, MeasurementError> + Send + Sync;
-```
+## Layout
 
-`MeasureInput` contains layout information such as child component ids and parent constraints, while the returned `ComputedData` is the component's size — the measurement result.
+`tessera-components` provides layout primitives such as `row`, `column`, `lazy_row`, and `lazy_column`. This section covers their basic usage.
 
-Note that `measure` does not need to be imported; it is injected into the function component's context by the `#[tessera]` macro and can be considered part of the component API.
+### row and column
 
-For detailed information about `MeasureInput` and `ComputedData`, see the documentation on docs.rs. Here is a simple measurement example: it measures the first child's size, places the child at the top-left (relative coordinate `(0, 0)`), and returns its own size as the child's size plus 10 pixels.
+`row` and `column` arrange children horizontally and vertically, respectively. They accept a `FnOnce(Scope)` closure rather than a plain `FnOnce()` so you can manage child lifecycle and weights via the provided `Scope`.
 
 ```rust
 #[tessera]
-fn component(child: impl FnOnce()) {
-    child(); // compose child component
-    measure(Box::new(|input| {
-        let child_node_id = input.children_ids[0];
-        let child_size = input.measure_child(child_node_id, input.parent_constraint)?;
-        input.place_child(child_node_id, PxPosition::new(Px(0), Px(0)));
-        Ok(
-            ComputedData {
-                width: child_size.width + Px(10),
-                height: child_size.height + Px(10),
+fn app() {
+    surface(SurfaceArgs::default(), || {
+        row(
+            RowArgs::default().modifier(Modifier::new().fill_max_width()),
+            |scope| {
+                scope.child(|| text("Item 1"));
+                scope.child(|| text("Item 2"));
+                scope.child(|| text("Item 3"));
             }
-        )
-    }))
+        );
+    });
 }
 ```
 
-This simple example demonstrates what a component must do to perform layout:
-
-1. Execute child component functions
-2. Measure child sizes
-3. Place child components
-4. Return its own size
-
-::: warning
-If you place children without measuring them, or measure children but do not place them, the renderer will panic at runtime.
-:::
-
-You may notice earlier examples did not include any explicit layout. That's because tessera provides a default layout behavior for components without a custom layout: it measures child components and places them at the top-left. This default behavior is adequate in many cases.
-
-### Input handling
-
-Similar to `measure`, the `#[tessera]` macro injects an `input_handler` function into the component for handling external input events.
-
-The following example shows a component that prevents components below it from receiving mouse events:
+To make children share space proportionally, use `scope.child_weighted(F, weight: f32)`.
 
 ```rust
 #[tessera]
-fn component() {
-    input_handler(Box::new(|mut input | {
-        input.block_cursor();
-    }))
+fn app() {
+    surface(SurfaceArgs::default(), || {
+        row(
+            RowArgs::default().modifier(Modifier::new().fill_max_width()),
+            |scope| {
+                scope.child_weighted(|| {
+                    surface(SurfaceArgs::default().style(Color::RED.into()), || {});
+                }, 1.0);
+                scope.child_weighted(|| {
+                    surface(SurfaceArgs::default().style(Color::GREEN.into()), || {});
+                }, 2.0);
+                scope.child_weighted(|| {
+                    surface(SurfaceArgs::default().style(Color::BLUE.into()), || {});
+                }, 1.0);
+            }
+        );
+    });
 }
 ```
 
-### Window callbacks
+### lazy_row and lazy_column
 
-The `#[tessera]` macro also injects functions to register window callbacks. Currently available callbacks include:
+`lazy_row` and `lazy_column` are virtualized scrolling lists that measure and lay out only visible items for performance. Prefer them over combining `row`/`column` with `scrollable` when dealing with large lists.
 
-- `on_minimize(Box<dyn Fn(bool) + Send + Sync>)` – window minimize callback
-- `on_close(Box<dyn Fn() + Send + Sync>)` – window close callback
+```rust
+#[tessera]
+fn app() {
+    surface(SurfaceArgs::default(), || {
+        lazy_row(
+            LazyRowArgs::default().content_padding(Dp(5.0)),
+            |scope| {
+                for i in 0..50 {
+                    scope.item(|| {
+                        card(CardArgs::default(), |_| {
+                            text(
+                                TextArgs::default()
+                                    .modifier(Modifier::new().padding_all(Dp(16.0)))
+                                    .text(i.to_string()),
+                            );
+                        })
+                    });
+                }
+            },
+        );
+    });
+}
+```
+
+and
+
+```rust
+#[tessera]
+fn app() {
+    surface(SurfaceArgs::default(), || {
+        lazy_column(
+            LazyColumnArgs::default().content_padding(Dp(5.0)),
+            |scope| {
+                for i in 0..50 {
+                    scope.item(|| {
+                        card(CardArgs::default(), |_| {
+                            text(
+                                TextArgs::default()
+                                    .modifier(Modifier::new().padding_all(Dp(16.0)))
+                                    .text(i.to_string()),
+                            );
+                        })
+                    });
+                }
+            },
+        );
+    });
+}
+```
+
+Both `lazy_row` and `lazy_column` support weights like `row` and `column`.
+
+## Custom layout
+
+For specialized layouts, implement a `LayoutSpec` and call `fn layout<S: LayoutSpec>(spec: S)` inside a `#[tessera]` component. `LayoutSpec` separates measurement from recording (drawing). This section focuses on the `measure` portion.
+
+A simple overlapping stack layout measures all children and returns the maximum width and height as its size, placing every child at `(0, 0)`.
+
+```rust
+#[derive(Clone, PartialEq)]
+struct ExampleSpec;
+
+impl LayoutSpec for ExampleSpec {
+    fn measure(
+        &self,
+        input: &tessera_ui::LayoutInput<'_>,
+        output: &mut tessera_ui::LayoutOutput<'_>,
+    ) -> Result<ComputedData, MeasurementError> {
+        let mut max_width = Px::ZERO;
+        let mut max_height = Px::ZERO;
+        let constraint = input.parent_constraint();
+        for &id in input.children_ids() {
+            let size = input.measure_child(id, constraint.as_ref())?;
+            max_width = max_width.max(size.width);
+            max_height = max_height.max(size.height);
+            output.place_child(id, PxPosition::ZERO);
+        }
+        Ok(ComputedData {
+            width: max_width,
+            height: max_height,
+        })
+    }
+}
+```
+
+For better performance, use `input.measure_children` to measure multiple children in parallel:
+
+```rust
+impl LayoutSpec for ExampleSpec {
+    fn measure(
+        &self,
+        input: &tessera_ui::LayoutInput<'_>,
+        output: &mut tessera_ui::LayoutOutput<'_>,
+    ) -> Result<ComputedData, MeasurementError> {
+        let mut max_width = Px::ZERO;
+        let mut max_height = Px::ZERO;
+        let constraint = input.parent_constraint();
+        let nodes_to_measure = input
+            .children_ids()
+            .iter()
+            .copied()
+            .map(|id| (id, constraint.as_ref().to_owned()))
+            .collect::<Vec<_>>();
+        for (id, size) in input.measure_children(nodes_to_measure)? {
+            max_width = max_width.max(size.width);
+            max_height = max_height.max(size.height);
+            output.place_child(id, PxPosition::ZERO);
+        }
+        Ok(ComputedData {
+            width: max_width,
+            height: max_height,
+        })
+    }
+}
+```
+
+## Window callbacks and events
+
+The `#[tessera]` macro injects functions to register window callbacks and event handlers. Currently available:
+
+- `on_minimize(Fn(bool) + Send + Sync + 'static)`: window minimize callback
+- `on_close(Fn() + Send + Sync + 'static)`: window close callback
+
+> ## Note for this page
+>
+> Some parts of the documentation are incomplete or not yet finished:
+>
+> - Event callbacks
+> - Input handling
