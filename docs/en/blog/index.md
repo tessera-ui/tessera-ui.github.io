@@ -8,7 +8,7 @@ import { data as posts } from './posts.data.ts'
 
 # Blog
 
-Welcome to the Tessera Blog. Here we share the latest updates and stories.
+Welcome to the Tessera Blog.
 
 <div v-for="post in posts" :key="post.url" class="post-item">
   <h2>
