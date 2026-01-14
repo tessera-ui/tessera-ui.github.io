@@ -399,16 +399,8 @@ impl LayoutSpec for ExampleSpec {
 }
 ```
 
-## Window callbacks and events
-
-The `#[tessera]` macro injects functions to register window callbacks and event handlers. Currently available:
-
-- `on_minimize(Fn(bool) + Send + Sync + 'static)`: window minimize callback
-- `on_close(Fn() + Send + Sync + 'static)`: window close callback
-
 > ## Note for this page
 >
 > Some parts of the documentation are incomplete or not yet finished:
 >
-> - Event callbacks
 > - Input handling

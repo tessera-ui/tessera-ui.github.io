@@ -602,16 +602,8 @@ impl LayoutSpec for ExampleSpec {
 }
 ```
 
-## 事件回调
-
-`#[tessera]` 宏还会为组件注入一些可以注册特殊事件回调的函数，目前有下面这些，在未来可能会有所变化：
-
-- `on_minimize(Fn(bool) + Send + Sync + 'static)`：窗口最小化时回调
-- `on_close(Fn() + Send + Sync + 'static)`： 窗口关闭时回调
-
 > ## Note for this page
 >
 > 还有部分文档未完成或者未完全完成
 >
-> - 事件回调
 > - 输入处理
