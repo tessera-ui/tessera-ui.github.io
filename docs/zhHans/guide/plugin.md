@@ -36,13 +36,14 @@ cargo tessera plugin new
 
 ## 插件加载
 
-插件通过被 `tessera` 应用调用 `init` 函数加载。在 `src/lib.rs` 中可以看到如下代码：
+插件通过在 `tessera_ui::entry!` 中注册实例来加载。插件类型通常实现 Default 以提供默认配置。在 src/lib.rs 中可以看到如下代码：
 
 ```rust
-// The registration of the plugin. DO NOT REMOVE
-pub fn init() -> impl Plugin {
-    HelloPlugin {
-        message: format!("Hello from my-plugin"),
+impl Default for HelloPlugin {
+    fn default() -> Self {
+        Self {
+            message: format!("Hello from my-plugin"),
+        }
     }
 }
 
@@ -51,15 +52,15 @@ pub fn with_plugin<R>(f: impl FnOnce(&HelloPlugin) -> R) -> R {
 }
 ```
 
-`init` 是插件的初始化函数，返回插件对象。而 `with_plugin` 则是一个辅助函数，用于在应用中方便的调用插件提供的接口。直接使用 `tessera_ui::with_plugin` 需要指定泛型参数，不利于编译器类型推导，最佳实践推荐保留它。
+`Default` 用于构造插件实例，应用侧可直接传入 `HelloPlugin::default()`，也可以自行构造以覆盖配置。`with_plugin` 是辅助函数，用于在应用中方便地调用插件接口。直接使用 `tessera_ui::with_plugin` 需要指定泛型参数，建议保留该封装。
 
-在 `tessera` 应用中，首先将插件crate加入到依赖，然后注册插件：
+在 `tessera` 应用中，先将插件 crate 加入依赖，然后注册插件实例：
 
 ```rust
 tessera_ui::entry!(
     app,
-    plugins = [my_plugin],
-    pipelines = [tessera_components]
+    plugins = [my_plugin::HelloPlugin::default()],
+    modules = [tessera_components::TesseraComponents],
 );
 ```
 

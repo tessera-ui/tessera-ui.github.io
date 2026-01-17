@@ -40,13 +40,14 @@ The `tessera-plugin.toml` is mainly used to declare required system permissions 
 
 ## Loading a plugin
 
-Plugins are loaded by `tessera` by calling their `init` function. In `src/lib.rs` you'll typically see something like:
+Plugins are loaded by registering an instance in `tessera_ui::entry!`. Plugin types typically implement `Default` to provide sensible default configuration. In `src/lib.rs` you may see something like:
 
 ```rust
-// The registration of the plugin. DO NOT REMOVE
-pub fn init() -> impl Plugin {
-    HelloPlugin {
-        message: format!("Hello from my-plugin"),
+impl Default for HelloPlugin {
+    fn default() -> Self {
+        Self {
+            message: format!("Hello from my-plugin"),
+        }
     }
 }
 
@@ -55,19 +56,19 @@ pub fn with_plugin<R>(f: impl FnOnce(&HelloPlugin) -> R) -> R {
 }
 ```
 
-`init` is the plugin initialization function and returns the plugin instance. `with_plugin` is a helper to call plugin-provided APIs from the app; keeping it avoids verbose generic annotations when using `tessera_ui::with_plugin` directly.
+`Default` is used to construct the plugin instance; the app can pass `HelloPlugin::default()` or construct a custom instance to override configuration. `with_plugin` is a small helper that avoids specifying the generic parameters when calling into `tessera_ui::with_plugin` directly.
 
-To register the plugin in a `tessera` app, add the plugin crate to dependencies and register it:
+To register the plugin in a `tessera` app, add the plugin crate to dependencies and register the plugin instance:
 
 ```rust
 tessera_ui::entry!(
     app,
-    plugins = [my_plugin],
-    pipelines = [tessera_components]
+    plugins = [my_plugin::HelloPlugin::default()],
+    modules = [tessera_components::TesseraComponents],
 );
 ```
 
-This will load `my_plugin` when the app starts, so `init` is required.
+This will automatically load `my_plugin` when the app starts. Therefore the `init` function (if present in older templates) is still expected by some templates, but registering an instance with `entry!` is the pattern used in current examples.
 
 ## Lifecycle events
 
