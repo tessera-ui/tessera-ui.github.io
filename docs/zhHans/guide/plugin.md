@@ -36,14 +36,19 @@ cargo tessera plugin new
 
 ## 插件加载
 
-插件通过在 `tessera_ui::entry!` 中注册实例来加载。插件类型通常实现 Default 以提供默认配置。在 src/lib.rs 中可以看到如下代码：
+插件通过在 `tessera_ui::entry!` 中注册 package（推荐）或插件实例来加载。模板会包含一个 package 来帮助注册插件。在 src/lib.rs 中可以看到如下代码：
 
 ```rust
-impl Default for HelloPlugin {
-    fn default() -> Self {
-        Self {
-            message: format!("Hello from my-plugin"),
-        }
+use tessera_ui::{EntryRegistry, TesseraPackage};
+
+#[derive(Clone, Debug)]
+pub struct HelloPackage {
+    message: String,
+}
+
+impl TesseraPackage for HelloPackage {
+    fn register(self, registry: &mut EntryRegistry) {
+        registry.register_plugin(HelloPlugin::new(self.message));
     }
 }
 
@@ -52,19 +57,21 @@ pub fn with_plugin<R>(f: impl FnOnce(&HelloPlugin) -> R) -> R {
 }
 ```
 
-`Default` 用于构造插件实例，应用侧可直接传入 `HelloPlugin::default()`，也可以自行构造以覆盖配置。`with_plugin` 是辅助函数，用于在应用中方便地调用插件接口。直接使用 `tessera_ui::with_plugin` 需要指定泛型参数，建议保留该封装。
+通常会为 package 实现 `Default` 以提供默认配置；应用侧可直接传入 `HelloPackage::default()`，也可以自行构造以覆盖配置。`with_plugin` 是辅助函数，用于在应用中方便地调用插件接口。直接使用 `tessera_ui::with_plugin` 需要指定泛型参数，建议保留该封装。
 
-在 `tessera` 应用中，先将插件 crate 加入依赖，然后注册插件实例：
+在 `tessera` 应用中，先将插件 crate 加入依赖，然后注册 package：
 
 ```rust
 tessera_ui::entry!(
     app,
-    plugins = [my_plugin::HelloPlugin::default()],
-    modules = [tessera_components::TesseraComponents],
+    packages = [
+        tessera_components::ComponentsPackage::default(),
+        my_plugin::HelloPackage::default(),
+    ],
 );
 ```
 
-这会自动在应用启动时加载 `my_plugin` 插件。因此 `init` 函数是必须的。
+这会自动在应用启动时加载 `my_plugin` 插件。如果你需要更低层的控制，也可以直接使用 `plugins = [my_plugin::HelloPlugin::default()]` 来注册插件实例。旧模板可能包含 `init` 函数，但 `entry!` 不会调用它。
 
 ## 生命周期事件
 

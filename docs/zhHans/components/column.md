@@ -22,7 +22,7 @@ where
 以下是一个正确使用 `column` 组件的例子：
 
 ```rust
-use tessera_ui_basic_components::{
+use tessera_components::{
     column::{column, ColumnArgs},
     text::text,
     spacer::{spacer, SpacerArgs},
@@ -48,3 +48,4 @@ column(ColumnArgs::default(), |scope| {
 ## 预览
 
 ![column](/column_example.png)
+

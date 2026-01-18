@@ -22,7 +22,7 @@ If you try to call child component functions directly inside the closure, the `c
 Here is a correct example of using the `column` component:
 
 ```rust
-use tessera_ui_basic_components::{
+use tessera_components::{
     column::{column, ColumnArgs},
     text::text,
     spacer::{spacer, SpacerArgs},
@@ -48,3 +48,4 @@ column(ColumnArgs::default(), |scope| {
 ## Preview
 
 ![column](/column_example.png)
+

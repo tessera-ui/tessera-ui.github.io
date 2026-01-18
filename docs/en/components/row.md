@@ -22,7 +22,7 @@ If you try to call child component functions directly inside the closure, the `r
 Here is a correct example of using the `row` component:
 
 ```rust
-use tessera_ui_basic_components::{
+use tessera_components::{
     row::{row, RowArgs},
     text::text
 };
@@ -46,3 +46,4 @@ row(RowArgs::default(), |scope| {
 ## Preview
 
 ![row](/row_example.png)
+

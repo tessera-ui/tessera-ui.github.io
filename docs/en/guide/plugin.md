@@ -40,14 +40,19 @@ The `tessera-plugin.toml` is mainly used to declare required system permissions 
 
 ## Loading a plugin
 
-Plugins are loaded by registering an instance in `tessera_ui::entry!`. Plugin types typically implement `Default` to provide sensible default configuration. In `src/lib.rs` you may see something like:
+Plugins are loaded by registering a package (recommended) or a plugin instance in `tessera_ui::entry!`. The templates include a package that registers the plugin for you. In `src/lib.rs` you may see something like:
 
 ```rust
-impl Default for HelloPlugin {
-    fn default() -> Self {
-        Self {
-            message: format!("Hello from my-plugin"),
-        }
+use tessera_ui::{EntryRegistry, TesseraPackage};
+
+#[derive(Clone, Debug)]
+pub struct HelloPackage {
+    message: String,
+}
+
+impl TesseraPackage for HelloPackage {
+    fn register(self, registry: &mut EntryRegistry) {
+        registry.register_plugin(HelloPlugin::new(self.message));
     }
 }
 
@@ -56,19 +61,21 @@ pub fn with_plugin<R>(f: impl FnOnce(&HelloPlugin) -> R) -> R {
 }
 ```
 
-`Default` is used to construct the plugin instance; the app can pass `HelloPlugin::default()` or construct a custom instance to override configuration. `with_plugin` is a small helper that avoids specifying the generic parameters when calling into `tessera_ui::with_plugin` directly.
+`Default` is usually implemented for the package to provide sensible configuration; the app can pass `HelloPackage::default()` or construct a custom package to override settings. `with_plugin` is a small helper that avoids specifying the generic parameters when calling into `tessera_ui::with_plugin` directly.
 
-To register the plugin in a `tessera` app, add the plugin crate to dependencies and register the plugin instance:
+To register the plugin in a `tessera` app, add the plugin crate to dependencies and register the package:
 
 ```rust
 tessera_ui::entry!(
     app,
-    plugins = [my_plugin::HelloPlugin::default()],
-    modules = [tessera_components::TesseraComponents],
+    packages = [
+        tessera_components::ComponentsPackage::default(),
+        my_plugin::HelloPackage::default(),
+    ],
 );
 ```
 
-This will automatically load `my_plugin` when the app starts. Therefore the `init` function (if present in older templates) is still expected by some templates, but registering an instance with `entry!` is the pattern used in current examples.
+This will automatically load `my_plugin` when the app starts. You can still register a plugin instance directly via `plugins = [my_plugin::HelloPlugin::default()]` when you need low-level control. Older templates may include `init` functions, but `entry!` does not call them.
 
 ## Lifecycle events
 

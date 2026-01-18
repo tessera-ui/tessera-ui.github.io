@@ -22,7 +22,7 @@ where
 以下是一个正确使用 `row` 组件的例子：
 
 ```rust
-use tessera_ui_basic_components::{
+use tessera_components::{
     row::{row, RowArgs},
     text::text
 };
@@ -46,3 +46,4 @@ row(RowArgs::default(), |scope| {
 ## 预览
 
 ![row](/row_example.png)
+

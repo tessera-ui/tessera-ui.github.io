@@ -13,7 +13,7 @@ The `image` component is used to display images.
 
 Notably, the `image` component itself does not own image data; instead it references image data via an `Arc<ImageData>` passed in through `ImageArgs`.
 
-The `ImageData` must be loaded via `tessera_ui_basic_components::image::load_image_from_source`, with the following definition:
+The `ImageData` must be loaded via `tessera_components::image::load_image_from_source`, with the following definition:
 
 ```rust
 pub fn load_image_from_source(
@@ -32,7 +32,7 @@ Below is an example that loads embedded binary image data into `ImageData`:
 
 ```rust
 use std::sync::Arc;
-use tessera_ui_basic_components::image::{
+use tessera_components::image::{
     image, load_image_from_source, ImageArgsBuilder, ImageSource,
 };
 
@@ -55,3 +55,4 @@ image(image_data);
 ## Preview
 
 ![image](/image_example.png)
+

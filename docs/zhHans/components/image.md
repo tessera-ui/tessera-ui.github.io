@@ -13,7 +13,7 @@ pub fn image(args: impl Into<ImageArgs>)
 
 值得一提的是，`image` 组件本身不持有图片数据，而是通过 `ImageArgs` 传入 `Arc<ImageData>` 来引用图片数据。
 
-而 `ImageData` 需通过 `tessera_ui_basic_components::image::load_image_from_source` 加载，其相关定义如下
+而 `ImageData` 需通过 `tessera_components::image::load_image_from_source` 加载，其相关定义如下
 
 ```rust
 pub fn load_image_from_source(
@@ -32,7 +32,7 @@ pub enum ImageSource {
 
 ```rust
 use std::sync::Arc;
-use tessera_ui_basic_components::image::{
+use tessera_components::image::{
     image, load_image_from_source, ImageArgsBuilder, ImageSource,
 };
 
@@ -55,3 +55,4 @@ image(image_data);
 ## 预览
 
 ![image](/image_example.png)
+

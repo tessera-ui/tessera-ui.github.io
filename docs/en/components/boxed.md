@@ -32,9 +32,9 @@ If you attempt to call child component functions directly inside the closure, th
 ## Examples
 
 ```rust
-use tessera_ui_basic_components::boxed::{boxed, BoxedArgs};
-use tessera_ui_basic_components::text::{text, TextArgsBuilder};
-use tessera_ui_basic_components::alignment::Alignment;
+use tessera_components::boxed::{boxed, BoxedArgs};
+use tessera_components::text::{text, TextArgsBuilder};
+use tessera_components::alignment::Alignment;
 
 boxed(BoxedArgs::default(), |scope| {
     // Add a child that will be in the background (rendered first).
@@ -51,3 +51,4 @@ boxed(BoxedArgs::default(), |scope| {
 ## Preview
 
 ![boxed](/boxed_example.png)
+

@@ -164,16 +164,15 @@ pub fn router_root(root_dest: impl RouterDestination + 'static)
 将它放在你的应用程序显示页面的地方，一个简单的想法是直接作为根组件：
 
 ```rust
-Renderer::run_with_config(
-    || router_root(HomePageDestination {
-        num: 0,
-    }),
-    |app| {
-        tessera_ui_basic_components::pipelines::register_pipelines(app);
-    },
-    config,
-)
-.unwrap();
+#[tessera]
+fn app() {
+    router_root(HomePageDestination { num: 0 });
+}
+
+tessera_ui::entry!(
+    app,
+    packages = [tessera_components::ComponentsPackage::default()],
+);
 ```
 
 这固然是可行的，但假如你有导航栏、顶栏、侧边栏等需要在页面之外的内容，也可放在别的容器组件中，总之，它是显示当前导航分片的组件。
@@ -209,3 +208,4 @@ fn about_page(#[state(app)] state: AboutPageState) {
 这代表 `AboutPageState` 的生命周期和应用程序相同。也就是说，无论 `about_page` 分片 是否被导航堆栈弹出，它的状态都不会被销毁。
 
 需要注意的是，尽管默认生命周期是 `shard` ，但是假如不使用导航功能，那么它就没有意义，可视为 `app` 生命周期。
+

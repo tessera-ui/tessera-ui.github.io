@@ -163,16 +163,15 @@ pub fn router_root(root_dest: impl RouterDestination + 'static)
 Put it where your app displays pages; a simple idea is to use it as the root component:
 
 ```rust
-Renderer::run_with_config(
-    || router_root(HomePageDestination {
-        num: 0,
-    }),
-    |app| {
-        tessera_ui_basic_components::pipelines::register_pipelines(app);
-    },
-    config,
-)
-.unwrap();
+#[tessera]
+fn app() {
+    router_root(HomePageDestination { num: 0 });
+}
+
+tessera_ui::entry!(
+    app,
+    packages = [tessera_components::ComponentsPackage::default()],
+);
 ```
 
 This works, but if you have a nav bar, top bar, side bar, or other content outside pages, you can put it in another container component; the root idea is that it's the component that displays the currently navigated shard.
@@ -208,3 +207,4 @@ fn about_page(#[state(app)] state: AboutPageState) {
 This means `AboutPageState` has the same lifetime as the application. That is, whether or not `about_page` is popped from the navigation stack, its state will not be destroyed.
 
 Note that although the default lifetime is `shard`, if you don't use navigation, it has no effect and can be considered `app` lifetime.
+

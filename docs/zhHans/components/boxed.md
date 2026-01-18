@@ -31,9 +31,9 @@ where
 ## 例子
 
 ```rust
-use tessera_ui_basic_components::boxed::{boxed, BoxedArgs};
-use tessera_ui_basic_components::text::{text, TextArgsBuilder};
-use tessera_ui_basic_components::alignment::Alignment;
+use tessera_components::boxed::{boxed, BoxedArgs};
+use tessera_components::text::{text, TextArgsBuilder};
+use tessera_components::alignment::Alignment;
 
 boxed(BoxedArgs::default(), |scope| {
     // 添加一个将位于背景的子组件（首先渲染）。
@@ -50,3 +50,4 @@ boxed(BoxedArgs::default(), |scope| {
 ## 预览
 
 ![boxed](/boxed_example.png)
+
