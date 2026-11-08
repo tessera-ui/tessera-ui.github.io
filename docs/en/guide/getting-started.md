@@ -1,101 +1,96 @@
 ---
-title: Getting Started
-order: 0
+title: Getting started
+description: Install the Tessera CLI, create a project, and run it on desktop, in a browser or on a phone.
 ---
 
-# Getting Started
+# Getting started
 
-This section guides you through creating a basic `tessera` application.
+In a few commands you can have a Tessera application running on your desktop, rebuilding itself each time you save a file. From there, the same project runs in a browser or on a phone.
 
-## Installation
+## Install the tools
 
-### Prerequisites
+Tessera needs Rust 1.98 or newer, which is the minimum compiler version `cargo-tessera` declares, along with the native linker and build tools for your operating system. Each extra target adds its own requirements:
 
-- The [Rust](https://www.rust-lang.org) programming language
+- **Web:** a browser with WebGPU. Release builds also need Binaryen 110 or newer, with `wasm-opt` on `PATH`.
+- **Android:** the Android SDK and NDK, Java for the generated Gradle project, and a device or emulator.
+- **iOS:** macOS with Xcode.
 
-## Create a new project
+[Platforms](/guide/platforms) lists the details for each one. With Rust installed, install the CLI:
 
-First, make sure you have the `cargo-tessera` CLI installed — it bundles the commands for creating, developing, and building Tessera apps.
-
-```bash
+```sh
 cargo install cargo-tessera
 ```
 
-Then create a new tessera project:
+The CLI runs as a Cargo subcommand, so every command on this page starts with `cargo tessera`.
 
-```bash
-cargo tessera new
-```
+## Create a project
 
-`cargo-tessera` will walk you through creating the project and generate a scaffold with example code. For this guide pick the `blank` template.
+Create an application from the `basic` template and start it:
 
-After creation, enter the project directory and run the dev server:
-
-```bash
+```sh
+cargo tessera new my-app --template basic
+cd my-app
 cargo tessera dev
 ```
 
-If a black or transparent window appears, your app is running.
+A window opens with `Hello Tessera!` on a full-window surface. The other template, `blank`, is the same project with an empty surface. Both include `tessera-components`, register `ComponentsPackage`, and wrap the root in a Material theme. Run `new` without `--template` and the CLI asks you to pick one; run it without a project name and it asks for that too.
 
-![empty](/getting-start-1.png)
+Unless a page says otherwise, the examples in these guides assume the `basic` template. You will edit `src/app.rs` most of the time; [Project structure](/guide/project-structure) explains the rest of the generated files.
 
-## Your first `tessera`
+## Edit and rerun
 
-In `tessera`, a component is a function marked with the `tessera` macro — we also call components "tessera".
+`cargo tessera dev` watches `src/`, `Cargo.toml`, `build.rs`, `tessera-app.toml`, `tessera-config.toml`, the application icon and the resource directories. Whenever one of them changes, it rebuilds the application and restarts it.
 
-### Add a background
+Each change restarts the process, so the application starts again from its initial state and initial screen after every edit. If a build fails, fix the error and save again, and `dev` picks up the next change.
 
-Open your project's `src/app.rs` and find the generated `app` function; it should look like this:
+To try it, replace `src/app.rs` with the counter from the [Introduction](/guide/) and save.
 
-```rust
-#[tessera]
-pub fn app() {
-    material_theme(MaterialTheme::default, || {
-        // Your app code goes here
-    });
-}
+## Run in a browser
+
+Add the WebAssembly target once, then start the web development server:
+
+```sh
+rustup target add wasm32-unknown-unknown
+cargo tessera web dev
 ```
 
-The `blank` template provides an empty `app` entry point — we'll add a white `surface` that fills the window and acts as the background:
+The command builds the project, serves it at `http://127.0.0.1:8000` and tries to open that address in your default browser. It keeps watching and rebuilding; refresh the page yourself after each rebuild to load the new version. Pass `--port 8080` to use another port.
 
-```rust
-#[tessera]
-pub fn app() {
-    material_theme(MaterialTheme::default, || {
-        surface(
-            SurfaceArgs::default().modifier(Modifier::new().fill_max_size()),
-            || {},
-        );
-    });
-}
+New projects already contain the browser host page in `gen/web/`. To add web support to an older project that lacks this page, run `cargo tessera web init` first. The browser runs the same component code compiled to WebAssembly; [Platforms](/guide/platforms) covers browser requirements and font loading.
+
+## Run on Android
+
+With the Android SDK and NDK installed, generate the Android project once and then run on a device:
+
+```sh
+cargo tessera android init
+cargo tessera android dev --device DEVICE_ID
 ```
 
-When `cargo tessera dev` completes a rebuild (or after restarting it), you should see a solid background.
+`android init` also installs the Rust Android targets; pass `--skip-targets-install` to skip that step. Use the device identifier that `adb devices` reports. Like the desktop command, `android dev` keeps watching: when your sources change it rebuilds the application, installs it on the device again and restarts it.
 
-![surface](/getting-start-2.png)
+## Build for iOS
 
-### Add text
+On macOS with Xcode, build the application for the iOS simulator:
 
-Next add a text component showing "Hello Tessera!":
-
-```rust
-#[tessera]
-pub fn app() {
-    material_theme(MaterialTheme::default, || {
-        surface(
-            SurfaceArgs::default().modifier(Modifier::new().fill_max_size()),
-            || {
-                text("Hello Tessera!");
-            },
-        );
-    });
-}
+```sh
+cargo tessera ios build
 ```
 
-After the dev server rebuilds, you'll see a white window with black "Hello Tessera!" text.
+This builds an application bundle once and exits; unlike `dev`, it does not watch your sources or run the app. Add `--device` to build an IPA for a physical device instead. [Packaging and release](/guide/distribution) covers signing and where the bundle is written.
 
-![hello](/getting-start-3.png)
+## Check the project
 
-## What's next
+Before you commit, run the checker:
 
-Congratulations — you have a simple `tessera` app running. Next, explore the [Tessera component model](../guide/component.md).
+```sh
+cargo tessera check
+```
+
+It checks Tessera call boundaries first and compilation second. The boundary rule is short: call a component from another component or from a recognized build closure. Ordinary event callbacks such as `on_click` run outside the build, so they change state and the next build shows the result. [Thinking in Tessera](/guide/thinking-in-tessera) explains why. `cargo tessera fix` applies the compiler's and Tessera's machine-applicable suggestions and then checks again.
+
+In a workspace, select the application with `-p my-app`. The [CLI reference](/guide/cli) describes lint settings, profiling and the other commands.
+
+## Next steps
+
+The [Tutorial](/guide/tutorial) starts from this project and builds a small app one change at a time. If you would rather understand the generated files first, read [Project structure](/guide/project-structure).

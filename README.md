@@ -1,39 +1,21 @@
-# Tessera-UI Offical Website
+# Tessera website
 
-[**Website**](https://tessera-ui.github.io/)
+[Website](https://tessera-ui.github.io/) | [Framework](https://github.com/tessera-ui/tessera)
 
-This is the source of official website for [Tessera UI](https://github.com/tessera-ui/tessera).
+Source for Tessera's documentation and website.
 
 ## Development
 
-### Install Dependencies
+Use [Bun](https://bun.sh/) 1.3.14, as pinned in `package.json` and CI.
 
-```bash
-pnpm install
-```
-
-### Run for Development
-
-```bash
-pnpm docs:dev
-```
-
-## Build
-
-### Build for Production
-
-```bash
-pnpm docs:build
-```
-
-### Preview Production Build
-
-```bash
-pnpm docs:preview
+```sh
+bun install --frozen-lockfile
+bun run docs:dev      # local development
+bun run docs:check    # documentation links and translations
+bun run docs:build    # production site
+bun run docs:preview  # preview the build
 ```
 
 ## License
 
-All source code in this repository is licensed under the [MIT License](https://github.com/tessera-ui/tessera-ui.github.io/blob/main/LICENSE)
-
-All documentation content is licensed under the [CC BY 4.0 License](https://creativecommons.org/licenses/by/4.0)
+Source code: [MIT](LICENSE). Documentation: [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/).
