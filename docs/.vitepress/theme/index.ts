@@ -1,6 +1,7 @@
 import DefaultTheme from "vitepress/theme";
 import Layout from "./Layout.vue";
 import { keepPlaceOnLanguageSwitch } from "./keepPlaceOnLanguageSwitch";
+import { initLanguagePreference } from "./languagePreference";
 import TesseraHome from "./home/TesseraHome.vue";
 import "@fontsource-variable/noto-sans";
 import "@fontsource-variable/noto-sans-sc";
@@ -18,6 +19,7 @@ export default {
   Layout,
   enhanceApp(ctx) {
     DefaultTheme.enhanceApp?.(ctx);
+    initLanguagePreference();
     keepPlaceOnLanguageSwitch(ctx.router);
     ctx.app.component("TesseraHome", TesseraHome);
   },
