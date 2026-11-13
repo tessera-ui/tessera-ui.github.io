@@ -30,6 +30,7 @@ export interface HomeCopy {
     lead: string;
     primary: Link;
   };
+  chapter: { lead: string; rest: string };
   demo: DemoCopy;
   showcase: {
     noteTitle: string;
@@ -71,6 +72,10 @@ const en: HomeCopy = {
     title: "Tessera",
     lead: "A fast, GPU-first Rust UI framework that is declarative and reactive.",
     primary: { text: "Get started", link: "/guide/getting-started" },
+  },
+  chapter: {
+    lead: "Write a function.",
+    rest: "Tessera draws the rest.",
   },
   demo: {
     title: "Live demo",
@@ -143,6 +148,10 @@ const zh: HomeCopy = {
     title: "Tessera",
     lead: "快速、GPU 优先的 Rust UI 框架，声明式且响应式。",
     primary: { text: "开始使用", link: "/zhHans/guide/getting-started" },
+  },
+  chapter: {
+    lead: "写一个函数，",
+    rest: "剩下的交给 Tessera 绘制。",
   },
   demo: {
     title: "在线演示",

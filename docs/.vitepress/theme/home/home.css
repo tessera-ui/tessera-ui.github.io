@@ -137,8 +137,9 @@ html.dark:has(.th) body {
   flex: 1;
 }
 
-/* The frame's side rules start below the hero, so no line crosses the tiling. */
-.th main > :not(.hero),
+/* The frame's side rules start below the hero, so no line crosses the tiling;
+   the chapter band draws its own as it scrolls in. */
+.th main > :not(.hero, .chapter),
 .th .foot {
   border-inline: 1px solid var(--th-line);
 }
@@ -505,14 +506,27 @@ html.dark:has(.th) body {
 .th .hero {
   position: relative;
   isolation: isolate;
-  min-height: min(calc(100svh - 56px - 120px), 760px);
+  /* Fills the first screen below the nav, so the chapter band starts the
+     scroll instead of peeking in. */
+  min-height: calc(100svh - 56px);
   display: flex;
   align-items: center;
   padding: clamp(56px, 8vw, 104px) var(--th-pad);
-  border-bottom: 1px solid var(--th-line);
   /* Clip vertically only: the parallax tiling must not slide into the next section,
      while the full-bleed background still extends sideways. */
   clip-path: inset(0 -100vw);
+}
+
+/* The tiling dissolves into the page at the hero's bottom edge. The fade
+   belongs to the hero, not the tiling, so the parallax can't slide it away. */
+.th .hero::after {
+  content: "";
+  position: absolute;
+  inset: auto -100vw 0;
+  z-index: -1;
+  height: min(220px, 40%);
+  background: linear-gradient(to bottom, transparent, var(--th-bg) 85%);
+  pointer-events: none;
 }
 
 /* The tiling spans the whole viewport width behind the framed column. */
@@ -605,6 +619,111 @@ html.dark:has(.th) body {
   }
 }
 
+/* ---------- Chapter ---------- */
+
+/* Bridges the frameless hero and the framed sections: the tiling fades out
+   above it, its side rules grow down into the frame, and a rule closes it. */
+.th .chapter {
+  position: relative;
+  padding: clamp(40px, 6vw, 80px) var(--th-pad) clamp(36px, 4.6vw, 56px);
+}
+
+.th .chapter::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 1px;
+  background: var(--th-line);
+  transform-origin: left;
+  transition: transform 0.9s var(--th-ease) 0.35s;
+}
+
+.th .chapter__rule {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 1px;
+  background: linear-gradient(to bottom, transparent, var(--th-line) 45%);
+  transform-origin: top;
+  transition: transform 0.9s var(--th-ease);
+}
+
+.th .chapter__rule--end {
+  inset: 0 0 0 auto;
+}
+
+.th .chapter__title {
+  display: grid;
+  font-size: clamp(30px, 4.4vw, 54px);
+  line-height: 1.1;
+  font-weight: 650;
+  letter-spacing: -0.035em;
+  color: var(--th-ink);
+  text-wrap: balance;
+}
+
+.th .chapter__title span {
+  transition:
+    opacity 0.8s var(--th-ease),
+    transform 0.8s var(--th-ease);
+}
+
+.th .chapter__title span + span {
+  color: var(--th-text-3);
+  transition-delay: 0.08s;
+}
+
+:lang(zh-CN) .th .chapter__title {
+  letter-spacing: -0.01em;
+}
+
+/* A short strip of tiles in the brand's two colors, laid one by one. */
+.th .chapter__tiles {
+  display: flex;
+  gap: 6px;
+  margin-top: clamp(24px, 3vw, 32px);
+}
+
+.th .chapter__tiles span {
+  width: 18px;
+  height: 6px;
+  border-radius: 2px;
+  background: color-mix(
+    in oklab,
+    var(--th-tile-from) calc(100% - var(--i) * 9%),
+    var(--th-tile-to)
+  );
+  transform-origin: left;
+  transition:
+    opacity 0.4s var(--th-ease),
+    transform 0.5s var(--th-ease);
+  transition-delay: calc(0.25s + var(--i) * 45ms);
+}
+
+.th .chapter.is-waiting .chapter__rule,
+.th .chapter.is-waiting::after {
+  transition: none;
+}
+
+.th .chapter.is-waiting .chapter__rule {
+  transform: scaleY(0);
+}
+
+.th .chapter.is-waiting::after {
+  transform: scaleX(0);
+}
+
+.th .chapter.is-waiting .chapter__title span {
+  opacity: 0;
+  transform: translateY(14px);
+  transition: none;
+}
+
+.th .chapter.is-waiting .chapter__tiles span {
+  opacity: 0;
+  transform: scaleX(0);
+  transition: none;
+}
+
 /* ---------- Showcase ---------- */
 
 .th .showcase {
@@ -614,6 +733,7 @@ html.dark:has(.th) body {
 }
 
 .th .showcase__code {
+  position: relative;
   min-width: 0;
   background: var(--th-code-bg);
   border-right: 1px solid var(--th-line);
@@ -621,6 +741,55 @@ html.dark:has(.th) body {
 
 .th .code {
   overflow-x: auto;
+}
+
+/* As the panel scrolls in, its lines cascade in while a bar in the brand's
+   colors runs down the gutter, like a pass over the source. */
+.th .showcase__code::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 2px;
+  background: linear-gradient(
+    to bottom,
+    var(--th-tile-from),
+    var(--th-tile-to)
+  );
+  transform-origin: top;
+  opacity: 0;
+  transition:
+    transform 1.1s var(--th-ease),
+    opacity 0.6s ease 1.1s;
+}
+
+.th .showcase.is-waiting .showcase__code::before {
+  transform: scaleY(0);
+  opacity: 1;
+  transition: none;
+}
+
+.th .code .line {
+  display: inline-block;
+  transition:
+    opacity 0.5s var(--th-ease),
+    transform 0.5s var(--th-ease);
+  transition-delay: calc(var(--i, 0) * 28ms);
+}
+
+.th .showcase.is-waiting .code .line {
+  opacity: 0;
+  transform: translateX(-8px);
+  transition: none;
+}
+
+.th .showcase__note,
+.th .showcase__start {
+  transition: opacity 0.7s var(--th-ease) 0.4s;
+}
+
+.th .showcase.is-waiting :is(.showcase__note, .showcase__start) {
+  opacity: 0;
+  transition: none;
 }
 
 .th .code pre {
@@ -981,10 +1150,6 @@ html.dark:has(.th) body {
 /* ---------- Responsive ---------- */
 
 @media (max-width: 960px) {
-  .th .hero {
-    min-height: 0;
-  }
-
   .th .showcase {
     grid-template-columns: minmax(0, 1fr);
   }
