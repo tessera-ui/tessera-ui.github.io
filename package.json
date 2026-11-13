@@ -14,7 +14,8 @@
     "docs:check": "bun scripts/check-docs.mjs",
     "docs:dev": "bun --bun vitepress dev docs",
     "docs:build": "bun --bun vitepress build docs",
-    "docs:preview": "bun --bun vitepress preview docs"
+    "docs:preview": "bun --bun vitepress preview docs",
+    "demo:build": "bun scripts/build-demo.ts"
   },
   "type": "module"
 }

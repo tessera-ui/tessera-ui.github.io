@@ -4,6 +4,7 @@ import { useData, withBase } from "vitepress";
 import HomeNav from "./HomeNav.vue";
 import HatField from "./HatField.vue";
 import CopyCommand from "./CopyCommand.vue";
+import LiveDemo from "./LiveDemo.vue";
 import { copies } from "./copy";
 import { data as code } from "./code.data";
 
@@ -118,6 +119,8 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </section>
+
+        <LiveDemo :copy="t.demo" />
 
         <section class="features">
           <component

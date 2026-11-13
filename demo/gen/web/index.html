@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #fdfbff;
+        user-select: none;
+        -webkit-user-select: none;
+      }
+
+      html.dark,
+      html.dark body {
+        background: #121318;
+      }
+
+      canvas,
+      canvas:focus,
+      canvas:focus-visible {
+        display: block;
+        width: 100%;
+        height: 100%;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+    </style>
+    <script>
+      if (new URLSearchParams(location.search).get("theme") === "dark") {
+        document.documentElement.classList.add("dark");
+      }
+      addEventListener("message", ({ origin, data }) => {
+        if (origin === location.origin && data?.source === "tessera-site") {
+          document.documentElement.classList.toggle(
+            "dark",
+            data.theme === "dark",
+          );
+        }
+      });
+    </script>
+      <!-- tessera-app -->
+<title>Tessera demo</title>
+<link rel="icon" href="./app/favicon.ico">
+<link rel="apple-touch-icon" href="./app/icon-180.png">
+<link rel="manifest" href="./app/manifest.webmanifest">
+<!-- /tessera-app -->
+</head>
+  <body>
+    <canvas id="tessera_site_demo_lib"></canvas>
+    <script type="module">
+      // The homepage embeds this page and shows its own loading state until it
+      // hears back.
+      const report = (type, detail) =>
+        parent !== window &&
+        parent.postMessage(
+          { source: "tessera-demo", type, detail },
+          location.origin,
+        );
+
+      if (!navigator.gpu) {
+        report("error", "webgpu");
+      } else {
+        try {
+          // `v` changes with each build, so a redeploy is never served stale.
+          const v = new URLSearchParams(location.search).get("v") ?? "";
+          const { default: init } = await import(
+            `./pkg-web/tessera_site_demo_lib.js?v=${v}`
+          );
+          await init({
+            module_or_path: `./pkg-web/tessera_site_demo_lib_bg.wasm?v=${v}`,
+          });
+          report("ready");
+        } catch (error) {
+          console.error(error);
+          report("error", String(error));
+        }
+      }
+    </script>
+  </body>
+</html>

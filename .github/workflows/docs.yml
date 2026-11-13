@@ -31,6 +31,26 @@ jobs:
         run: bun install --frozen-lockfile
       - name: Check documentation links
         run: bun run docs:check
+
+      # The homepage's live demo is a Tessera app built to WebAssembly.
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Cache Rust builds
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: demo -> target
+          # cargo-tessera, installed at the demo's pinned Tessera commit.
+          cache-directories: demo/.tools
+      - name: Install Binaryen
+        run: |
+          curl -sSfL https://github.com/WebAssembly/binaryen/releases/download/version_133/binaryen-version_133-x86_64-linux.tar.gz \
+            | tar -xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/binaryen-version_133/bin" >> "$GITHUB_PATH"
+      - name: Build the demo
+        run: bun run demo:build
+
       - name: Build
         run: bun run docs:build
       - name: Setup Pages

@@ -9,3 +9,6 @@ yarn.lock
 docs/.vitepress/dist
 *.local
 docs/.vitepress/cache
+# Built by `bun run demo:build` (in CI on deploy).
+docs/public/demo/
+docs/.vitepress/theme/home/demo-build.json

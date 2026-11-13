@@ -1,0 +1,42 @@
+[package]
+name = "tessera-site-demo"
+version = "0.1.0"
+edition = "2024"
+publish = false
+
+[lib]
+crate-type = ["rlib", "cdylib"]
+name = "tessera_site_demo_lib"
+path = "src/lib.rs"
+
+[[bin]]
+name = "tessera_site_demo"
+path = "src/main.rs"
+
+# Every Tessera crate comes from the same pinned commit. scripts/build-demo.ts
+# reads this revision to install the matching cargo-tessera.
+[dependencies]
+tessera-ui = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+tessera-components = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+tessera-foundation = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = "1"
+
+[target.'cfg(target_family = "wasm")'.dependencies]
+js-sys = "0.3.107"
+wasm-bindgen = "0.2.130"
+wasm-bindgen-futures = "0.4.80"
+web-sys = { version = "0.3.107", features = [
+    "AddEventListenerOptions",
+    "EventTarget",
+    "Location",
+    "MessageEvent",
+    "Window",
+] }
+
+[build-dependencies]
+tessera-build = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+
+# Keep the demo out of any parent workspace.
+[workspace]

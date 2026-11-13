@@ -1,0 +1,8 @@
+#:schema https://raw.githubusercontent.com/tessera-ui/tessera/main/docs/schemas/tessera-config.schema.json
+permissions = []
+
+[assets]
+dir = "assets"
+
+[assets.tree_shaking]
+exclude = []

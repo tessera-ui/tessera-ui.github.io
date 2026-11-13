@@ -3,6 +3,18 @@ interface Link {
   link: string;
 }
 
+export interface DemoCopy {
+  title: string;
+  frameTitle: string;
+  run: (size: string) => string;
+  loading: string;
+  unsupported: string;
+  failed: string;
+  failedHint: string;
+  note: string;
+  source: string;
+}
+
 export interface HomeCopy {
   homeLink: string;
   nav: {
@@ -19,6 +31,7 @@ export interface HomeCopy {
     primary: Link;
   };
   stats: { value: string; label: string }[];
+  demo: DemoCopy;
   showcase: {
     noteTitle: string;
     note: string;
@@ -66,6 +79,19 @@ const en: HomeCopy = {
     { value: "0", label: "Redraws when nothing changed" },
     { value: "100%", label: "Rust, no webview" },
   ],
+  demo: {
+    title: "Live demo",
+    frameTitle: "Tessera demo running on WebGPU",
+    run: (size) => `Run the demo · ${size}`,
+    loading: "Loading WebAssembly…",
+    unsupported:
+      "This browser doesn't expose WebGPU. Try a recent Chrome, Edge or Safari.",
+    failed: "Try again",
+    failedHint:
+      "The demo failed to start. The browser console has the details.",
+    note: "* A chat client built with Tessera, compiled to WebAssembly and drawn with WebGPU. The replies are scripted.",
+    source: "Demo source",
+  },
   showcase: {
     noteTitle: "How it works",
     note: "The UI is a Rust function of state. Tessera runs these functions as needed to build each frame, then draws it on the GPU using Vulkan, Metal, DirectX 12 or WebGPU. No HTML, no CSS, no WebView.",
@@ -131,6 +157,18 @@ const zh: HomeCopy = {
     { value: "0", label: "无变化时的重绘" },
     { value: "100%", label: "Rust，没有 WebView" },
   ],
+  demo: {
+    title: "在线演示",
+    frameTitle: "运行在 WebGPU 上的 Tessera 演示",
+    run: (size) => `运行演示 · ${size}`,
+    loading: "正在加载 WebAssembly…",
+    unsupported:
+      "当前浏览器没有提供 WebGPU，请换用较新的 Chrome、Edge 或 Safari。",
+    failed: "重试",
+    failedHint: "演示启动失败，详情见浏览器控制台。",
+    note: "* 用 Tessera 写的聊天客户端，编译为 WebAssembly，通过 WebGPU 绘制。回复内容是预设的。",
+    source: "演示源码",
+  },
   showcase: {
     noteTitle: "工作方式",
     note: "界面是关于状态的 Rust 函数。Tessera 按需执行它们来构建每帧，并通过 GPU 在 Vulkan、Metal、DirectX 12 或 WebGPU 上绘制。没有 HTML，没有 CSS，没有 WebView。",
