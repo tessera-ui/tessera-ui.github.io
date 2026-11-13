@@ -103,6 +103,16 @@ const en: HomeCopy = {
       link: "/guide/platforms",
     },
     {
+      title: "Platform plugins",
+      body: "Write a platform plugin to call APIs only one platform has.",
+      link: "/guide/plugins",
+    },
+    {
+      title: "Reactive",
+      body: "No state notifications to keep in sync by hand.",
+      link: "/guide/state",
+    },
+    {
       title: "Bring your own shader",
       body: "Every effect is a pluggable shader, the built-in component library included.",
       link: "/guide/drawing",
@@ -176,6 +186,16 @@ const zh: HomeCopy = {
       title: "跨平台支持",
       body: "支持 Windows、macOS、Linux、Android、iOS 和 Web。",
       link: "/zhHans/guide/platforms",
+    },
+    {
+      title: "平台插件",
+      body: "编写平台插件，调用平台特有的 API。",
+      link: "/zhHans/guide/plugins",
+    },
+    {
+      title: "响应式",
+      body: "无需维护复杂的状态通知。",
+      link: "/zhHans/guide/state",
     },
     {
       title: "自定义着色器",

@@ -887,7 +887,6 @@ html.dark:has(.th) body {
 .th .features {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  padding-bottom: clamp(64px, 10vw, 144px);
 }
 
 .th .feature {
@@ -902,6 +901,12 @@ html.dark:has(.th) body {
 
 .th .feature:nth-child(odd) {
   border-right: 1px solid var(--th-line);
+}
+
+/* The footer's rule closes the last row. */
+.th .feature:last-child,
+.th .feature:nth-child(odd):nth-last-child(2) {
+  border-bottom: 0;
 }
 
 .th a.feature:hover {
@@ -1199,5 +1204,9 @@ html.dark:has(.th) body {
 
   .th .feature:nth-child(odd) {
     border-right: 0;
+  }
+
+  .th .feature:nth-child(odd):nth-last-child(2) {
+    border-bottom: 1px solid var(--th-line);
   }
 }
