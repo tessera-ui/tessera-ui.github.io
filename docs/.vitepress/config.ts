@@ -5,6 +5,7 @@ import fs from "node:fs";
 import { tesseraDark, tesseraLight } from "./theme/home/shiki-themes";
 import { readingTime } from "./blogPosts";
 import { writeLegacyRedirects } from "./redirects";
+import { LOCALES, type Locale } from "./locales";
 
 const GITHUB = "https://github.com/tessera-ui/tessera";
 const API_DOCS = "https://tessera-ui.github.io/tessera/tessera_ui/";
@@ -77,33 +78,43 @@ const SIDEBAR: { group: Titles; pages: [string, Titles][] }[] = [
   },
 ];
 
-function sidebar(lang: "en" | "zh"): DefaultTheme.SidebarItem[] {
-  const base = lang === "en" ? "/guide/" : "/zhHans/guide/";
+// Navigation titles, by locale code.
+const NAV: Titles[] = [
+  { en: "Docs", zh: "文档" },
+  { en: "Blog", zh: "博客" },
+  { en: "Edit this page on GitHub", zh: "在 GitHub 上编辑此页" },
+];
+const [DOCS, BLOG, EDIT] = NAV;
+
+function sidebar(locale: Locale): DefaultTheme.SidebarItem[] {
   return SIDEBAR.map(({ group, pages }) => ({
-    text: group[lang],
+    text: group[locale.code],
     items: pages.map(([slug, title]) => ({
-      text: title[lang],
-      link: base + slug,
+      text: title[locale.code],
+      link: `${locale.prefix}/guide/${slug}`,
     })),
   }));
 }
 
-function nav(lang: "en" | "zh"): DefaultTheme.NavItem[] {
-  const prefix = lang === "en" ? "" : "/zhHans";
+function nav(locale: Locale): DefaultTheme.NavItem[] {
   return [
     {
-      text: lang === "en" ? "Docs" : "文档",
-      link: `${prefix}/guide/`,
+      text: DOCS[locale.code],
+      link: `${locale.prefix}/guide/`,
       activeMatch: "/guide/",
     },
     { text: "API", link: API_DOCS },
     {
-      text: lang === "en" ? "Blog" : "博客",
-      link: `${prefix}/blog/`,
+      text: BLOG[locale.code],
+      link: `${locale.prefix}/blog/`,
       activeMatch: "/blog/",
     },
   ];
 }
+
+// vitepress-i18n names the default language by its code.
+const i18nName = (locale: Locale) =>
+  locale.key === "root" ? locale.code : locale.key;
 
 const vitePressConfig: UserConfig = {
   title: "Tessera",
@@ -169,23 +180,17 @@ const vitePressConfig: UserConfig = {
 
 const vitePressI18nConfig: VitePressI18nOptions = {
   searchProvider: "local",
-  locales: ["en", "zhHans"],
-  themeConfig: {
-    en: {
-      nav: nav("en"),
-      sidebar: { "/guide/": sidebar("en") },
-      editLink: {
-        text: "Edit this page on GitHub",
+  locales: LOCALES.map(i18nName),
+  themeConfig: Object.fromEntries(
+    LOCALES.map((locale) => [
+      i18nName(locale),
+      {
+        nav: nav(locale),
+        sidebar: { [`${locale.prefix}/guide/`]: sidebar(locale) },
+        editLink: { text: EDIT[locale.code] },
       },
-    },
-    zhHans: {
-      nav: nav("zh"),
-      sidebar: { "/zhHans/guide/": sidebar("zh") },
-      editLink: {
-        text: "在 GitHub 上编辑此页",
-      },
-    },
-  },
+    ]),
+  ),
 };
 
 // https://vitepress.dev/reference/site-config

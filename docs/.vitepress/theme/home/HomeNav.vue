@@ -2,6 +2,7 @@
 import { ref } from "vue";
 import { useData, withBase } from "vitepress";
 import TileMark from "./TileMark.vue";
+import LanguageMenu from "./LanguageMenu.vue";
 import { toggleAppearance } from "../appearance";
 import type { HomeCopy } from "./copy";
 import { GITHUB } from "./copy";
@@ -35,13 +36,7 @@ const toggleTheme = (event: MouseEvent) => toggleAppearance(isDark, event);
       </nav>
 
       <div class="nav__actions">
-        <a
-          class="nav__lang"
-          :href="withBase(props.copy.nav.altLang.link)"
-          :lang="props.copy.nav.altLang.lang"
-        >
-          {{ props.copy.nav.altLang.text }}
-        </a>
+        <LanguageMenu :label="props.copy.nav.language" />
         <a class="nav__icon" :href="GITHUB" aria-label="GitHub" title="GitHub">
           <svg viewBox="0 0 24 24" aria-hidden="true" class="nav__gh">
             <path

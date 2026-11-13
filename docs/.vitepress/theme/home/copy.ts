@@ -20,7 +20,7 @@ export interface HomeCopy {
   nav: {
     label: string;
     items: Link[];
-    altLang: Link & { lang: string };
+    language: string;
     theme: string;
     menu: string;
   };
@@ -30,7 +30,6 @@ export interface HomeCopy {
     lead: string;
     primary: Link;
   };
-  stats: { value: string; label: string }[];
   demo: DemoCopy;
   showcase: {
     noteTitle: string;
@@ -63,7 +62,7 @@ const en: HomeCopy = {
       { text: "API", link: API_DOCS },
       { text: "Blog", link: "/blog/" },
     ],
-    altLang: { text: "中文", link: "/zhHans/", lang: "zh-CN" },
+    language: "Language",
     theme: "Toggle color theme",
     menu: "Menu",
   },
@@ -73,12 +72,6 @@ const en: HomeCopy = {
     lead: "A fast, GPU-first Rust UI framework that is declarative and reactive.",
     primary: { text: "Get started", link: "/guide/getting-started" },
   },
-  stats: [
-    { value: "100+", label: "Material 3 Expressive components" },
-    { value: "6", label: "Platforms, one codebase" },
-    { value: "0", label: "Redraws when nothing changed" },
-    { value: "100%", label: "Rust, no webview" },
-  ],
   demo: {
     title: "Live demo",
     frameTitle: "Tessera demo running on WebGPU",
@@ -141,7 +134,7 @@ const zh: HomeCopy = {
       { text: "API", link: API_DOCS },
       { text: "博客", link: "/zhHans/blog/" },
     ],
-    altLang: { text: "EN", link: "/", lang: "en" },
+    language: "语言",
     theme: "切换配色",
     menu: "菜单",
   },
@@ -151,12 +144,6 @@ const zh: HomeCopy = {
     lead: "快速、GPU 优先的 Rust UI 框架，声明式且响应式。",
     primary: { text: "开始使用", link: "/zhHans/guide/getting-started" },
   },
-  stats: [
-    { value: "100+", label: "个 Material 3 Expressive 组件" },
-    { value: "6", label: "个平台，同一份代码" },
-    { value: "0", label: "无变化时的重绘" },
-    { value: "100%", label: "Rust，没有 WebView" },
-  ],
   demo: {
     title: "在线演示",
     frameTitle: "运行在 WebGPU 上的 Tessera 演示",
@@ -209,4 +196,5 @@ const zh: HomeCopy = {
   },
 };
 
-export const copies = { en, zh };
+/** Homepage copy by locale code (see docs/.vitepress/locales.ts). */
+export const copies: Record<string, HomeCopy> = { en, zh };

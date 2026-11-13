@@ -1,14 +1,21 @@
 import { withBase } from "vitepress";
+import {
+  DEFAULT_LOCALE,
+  localeByCode,
+  localeForBrowser,
+  localeOfPath,
+} from "../locales";
 
 const KEY = "tessera:language";
+// The homepage language menu and the VitePress desktop/mobile menus.
 const LANGUAGE_LINKS =
-  ".nav__lang, .VPNavBarTranslations a, .VPNavScreenTranslations a, .VPNavBarExtra .translations a";
+  "[data-language-link], .VPNavBarTranslations a, .VPNavScreenTranslations a, .VPNavBarExtra .translations a";
 
 export function initLanguagePreference() {
   if (typeof window === "undefined") return;
 
-  // Only an initial visit to the plain homepage uses the browser language.
-  // Explicit links to either language, including document deep links, win.
+  // Only an initial visit to the plain homepage picks a language. Explicit
+  // links to any language, including document deep links, win.
   if (
     location.pathname === withBase("/") &&
     !location.search &&
@@ -20,16 +27,14 @@ export function initLanguagePreference() {
     } catch {
       // Private browsing may block storage; browser language still works.
     }
-    if (
-      saved === "zh" ||
-      (!saved &&
-        /^zh(?:-|$)/i.test(navigator.languages?.[0] ?? navigator.language))
-    ) {
-      location.replace(withBase("/zhHans/"));
-    }
+    const locale =
+      localeByCode(saved) ??
+      localeForBrowser(navigator.languages ?? [navigator.language]) ??
+      DEFAULT_LOCALE;
+    if (locale !== DEFAULT_LOCALE)
+      location.replace(withBase(locale.prefix + "/"));
   }
 
-  // Both the homepage and the VitePress desktop/mobile menus use links.
   document.addEventListener("click", (event) => {
     if (
       event.button !== 0 ||
@@ -45,11 +50,9 @@ export function initLanguagePreference() {
     if (!link) return;
     const url = new URL(link.href);
     if (url.origin !== location.origin) return;
+    const path = url.pathname.slice(withBase("/").length - 1);
     try {
-      localStorage.setItem(
-        KEY,
-        url.pathname.startsWith(withBase("/zhHans/")) ? "zh" : "en",
-      );
+      localStorage.setItem(KEY, localeOfPath(path).code);
     } catch {
       // Switching languages still works when storage is unavailable.
     }

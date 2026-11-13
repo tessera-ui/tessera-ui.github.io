@@ -189,8 +189,7 @@ html.dark:has(.th) body {
   gap: 2px;
 }
 
-.th .nav__links a,
-.th .nav__lang {
+.th .nav__links a {
   padding: 5px 9px;
   border-radius: 6px;
   font-size: 14px;
@@ -200,8 +199,7 @@ html.dark:has(.th) body {
     background-color 0.2s;
 }
 
-.th .nav__links a:hover,
-.th .nav__lang:hover {
+.th .nav__links a:hover {
   color: var(--th-ink);
   background: var(--th-line);
 }
@@ -242,6 +240,117 @@ html.dark:has(.th) body {
 .th .nav__icon .nav__gh {
   fill: currentColor;
   stroke: none;
+}
+
+/* Language menu: lists every locale in docs/.vitepress/locales.ts. */
+.th .lang {
+  position: relative;
+}
+
+.th .lang__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: 7px;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--th-text-2);
+  cursor: pointer;
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.th .lang__button:hover,
+.th .lang.is-open .lang__button {
+  color: var(--th-ink);
+  background: var(--th-line);
+}
+
+.th .lang__button svg,
+.th .lang__item svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.th .lang__button .lang__chevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.25s var(--th-ease);
+}
+
+.th .lang.is-open .lang__chevron {
+  transform: rotate(180deg);
+}
+
+.th .lang__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  min-width: 180px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  border: 1px solid var(--th-line-2);
+  border-radius: 10px;
+  background: var(--th-elev);
+  box-shadow: 0 12px 32px -12px rgba(8, 12, 30, 0.28);
+  animation: lang-in 0.18s var(--th-ease);
+}
+
+@keyframes lang-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+.th .lang__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  height: 36px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--th-text-2);
+  transition:
+    color 0.2s,
+    background-color 0.2s;
+}
+
+.th .lang__item:hover,
+.th .lang__item:focus-visible {
+  color: var(--th-ink);
+  background: var(--th-line);
+}
+
+.th .lang__item[aria-current] {
+  color: var(--th-ink);
+  font-weight: 600;
+}
+
+.th .lang__item svg {
+  width: 15px;
+  height: 15px;
+  color: var(--th-accent);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .th .lang__menu {
+    animation: none;
+  }
 }
 
 .th .nav__moon,
@@ -401,7 +510,7 @@ html.dark:has(.th) body {
   align-items: center;
   padding: clamp(56px, 8vw, 104px) var(--th-pad);
   border-bottom: 1px solid var(--th-line);
-  /* Clip vertically only: the parallax tiling must not slide into the stats,
+  /* Clip vertically only: the parallax tiling must not slide into the next section,
      while the full-bleed background still extends sideways. */
   clip-path: inset(0 -100vw);
 }
@@ -494,34 +603,6 @@ html.dark:has(.th) body {
   .th .hero__copy > * {
     animation: none;
   }
-}
-
-/* ---------- Stats ---------- */
-
-.th .stats {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  border-bottom: 1px solid var(--th-line);
-}
-
-.th .stat {
-  display: grid;
-  gap: 12px;
-  align-content: start;
-  padding: 26px var(--th-pad) 24px;
-}
-
-.th .stat + .stat {
-  border-left: 1px solid var(--th-line);
-}
-
-.th .stat strong {
-  font-size: clamp(30px, 3vw, 38px);
-  line-height: 1;
-  font-weight: 600;
-  letter-spacing: -0.035em;
-  color: var(--th-ink);
-  font-variant-numeric: tabular-nums;
 }
 
 /* ---------- Showcase ---------- */
@@ -904,18 +985,6 @@ html.dark:has(.th) body {
     min-height: 0;
   }
 
-  .th .stats {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .th .stat:nth-child(3) {
-    border-left: 0;
-  }
-
-  .th .stat:nth-child(n + 3) {
-    border-top: 1px solid var(--th-line);
-  }
-
   .th .showcase {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -933,6 +1002,11 @@ html.dark:has(.th) body {
 
   .th .nav__burger {
     display: inline-grid;
+  }
+
+  .th .lang__current,
+  .th .lang__chevron {
+    display: none;
   }
 
   .th .hero__veil {

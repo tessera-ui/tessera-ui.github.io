@@ -6,11 +6,13 @@ import HatField from "./HatField.vue";
 import CopyCommand from "./CopyCommand.vue";
 import LiveDemo from "./LiveDemo.vue";
 import { copies } from "./copy";
+import { DEFAULT_LOCALE, localeByKey } from "../../locales";
 import { data as code } from "./code.data";
 
 const { localeIndex } = useData();
-const t = computed(() =>
-  localeIndex.value === "zhHans" ? copies.zh : copies.en,
+const t = computed(
+  () =>
+    copies[localeByKey(localeIndex.value).code] ?? copies[DEFAULT_LOCALE.code],
 );
 const href = (link: string) =>
   link.startsWith("http") ? link : withBase(link);
@@ -90,13 +92,6 @@ onBeforeUnmount(() => {
             </div>
           </div>
         </section>
-
-        <ul class="stats">
-          <li v-for="s in t.stats" :key="s.label" class="stat">
-            <strong>{{ s.value }}</strong>
-            <span class="label">{{ s.label }}</span>
-          </li>
-        </ul>
 
         <section class="showcase">
           <div class="showcase__code">

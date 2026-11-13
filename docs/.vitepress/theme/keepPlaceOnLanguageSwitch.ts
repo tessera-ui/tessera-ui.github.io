@@ -1,11 +1,10 @@
 import { nextTick } from "vue";
 import type { Router } from "vitepress";
+import { localeOfPath, translatePath } from "../locales";
 
-const ZH = "/zhHans";
-// Elements that line up between the two languages: doc headings and the
-// homepage sections and cards. Both languages share the same structure.
-const ANCHORS =
-  ".vp-doc :is(h1, h2, h3), .th main > *, .th .stat, .th .feature";
+// Elements that line up between languages: doc headings and the homepage
+// sections and cards. Every language shares the same structure.
+const ANCHORS = ".vp-doc :is(h1, h2, h3), .th main > *, .th .feature";
 // The reading line sits just below the fixed navigation bar.
 const LINE = 80;
 
@@ -22,14 +21,11 @@ const pathOf = (href: string) =>
     .replace(/\/index$/, "/")
     .replace(/(.)\/$/, "$1");
 
-/** Whether two paths are the same page in English and Chinese. */
+/** Whether two paths are the same page in two different languages. */
 function isTranslation(from: string, to: string) {
-  const strip = (p: string) =>
-    p === ZH ? "/" : p.startsWith(ZH + "/") ? p.slice(ZH.length) : null;
-  const fromZh = strip(from);
-  const toZh = strip(to);
+  const target = localeOfPath(to);
   return (
-    (fromZh !== null) !== (toZh !== null) && (fromZh ?? from) === (toZh ?? to)
+    localeOfPath(from) !== target && pathOf(translatePath(from, target)) === to
   );
 }
 
@@ -71,8 +67,8 @@ function restore(place: Place) {
 }
 
 /**
- * Keeps the reader at the same section when switching between the English and
- * Chinese version of a page, instead of jumping back to the top.
+ * Keeps the reader at the same section when switching a page to another
+ * language, instead of jumping back to the top.
  */
 export function keepPlaceOnLanguageSwitch(router: Router) {
   if (typeof window === "undefined") return;
