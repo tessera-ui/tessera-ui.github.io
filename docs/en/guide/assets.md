@@ -1,16 +1,15 @@
 ---
-title: Resources
-description: Ship images, icons, fonts and data files with your app and load them through generated references.
+title: Assets, images, and fonts
+description: Bundle images, icons, fonts, and data files via tessera-build and load them across every platform.
 ---
 
-# Resources
+# Assets, images, and fonts
 
-Images, icons, fonts and data files you ship with the app go in an assets directory. At build time Tessera generates a typed reference for each file, so you refer to `res::images::LOGO_SVG`, a missing file is a compile error, and the same code finds the file on every platform however it ends up being delivered.
-
-To show an image, pass its generated reference to `.painter(...)`. For an `assets/images/logo.svg` file:
+Place static files in your project's assets directory so `tessera-build` turns them into typed Rust constants under `crate::res`. Missing paths fail at compile time, and the same `Asset` handle resolves whether assets are embedded or delivered per platform.
 
 ```rust
-use tessera_components::{image::image, modifier::ModifierExt as _};
+use tessera_components::image::image;
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
 use crate::res;
@@ -23,11 +22,9 @@ fn logo() {
 }
 ```
 
-The component reads and decodes the file for you. The reference describes where the bytes come from; the component requests the resource and updates when it becomes available. The component rendering pipelines come from `ComponentsPackage`, registered at the [entry point](/guide/app).
+## Configuring `tessera-config.toml`
 
-## Configure the assets directory
-
-Asset settings belong in `tessera-config.toml` at the package root:
+Enable asset generation in `tessera-config.toml` at your package root:
 
 ```toml
 [assets]
@@ -38,47 +35,38 @@ embed = ["images/logo.svg"]
 exclude = ["runtime/**"]
 ```
 
-`dir` is relative to the package root and defaults to `assets` when the `[assets]` section exists. The directory must exist. The build helper collects an asset directory only when the `[assets]` section is present.
+- `dir`: asset folder relative to the package root (defaults to `assets` when `[assets]` is present).
+- `embed`: exact asset paths (relative to `dir`) that must always stay embedded in the binary even when building with `--asset-backend platform`.
+- `tree_shaking.exclude`: glob patterns for assets kept during platform packaging even if static analysis finds no direct constant reference (useful for dynamically selected paths).
 
-`embed` lists exact paths relative to that directory. These files stay embedded in the binary even when the CLI chooses platform delivery for the other assets. By default the build helper embeds everything; platform delivery lets the CLI ship files separately through platform resources or HTTP. Let the CLI manage delivery when you [package and release](/guide/distribution) the app.
+Directory names map to lowercase module names (escaping Rust 2024 keywords with a trailing `_`), and filenames including extensions map to uppercase constants with punctuation replaced by `_`—for instance, `assets/images/logo.svg` becomes `res::images::LOGO_SVG`.
 
-`tree_shaking.exclude` takes glob patterns for files that must **remain available** even when platform asset analysis finds no reference to them. In other words, it protects files from removal. Use it for resources your code selects dynamically. To keep them embedded under platform delivery, list them in `embed` as well.
+## Images and vector icons
 
-## Generated references
-
-The generated project's `build.rs` calls `tessera_build::build()`, which writes the references into a module that `src/res.rs` exposes as `res`; [Project structure](/guide/project-structure) shows those files. Rebuilding picks up added or removed assets.
-
-Directory names become lowercase modules, and file names become uppercase constants that include the extension, with punctuation replaced by underscores. So `images/logo.svg` becomes `res::images::LOGO_SVG`, and `fonts/ExampleSans.ttf` becomes `res::fonts::EXAMPLESANS_TTF`. Names that collide after this normalization are rejected. Leave the generated file to the build, and reach every asset through its generated reference, which carries the delivery path for each platform.
-
-## Images and icons
-
-`Painter` accepts generated assets, file paths, encoded bytes, `ImageData` and `ImageVectorData`. Both `image().painter(...)` and `icon().painter(...)` use this shared representation. A string source is a filesystem path on native targets and a URL on the web, while a generated asset picks the right delivery mechanism for the target.
-
-The Material icons that ship with the components crate are generated assets too, in `filled`, `outlined`, `round`, `sharp` and `two_tone` styles:
+`Painter` accepts generated `Asset` constants, path/URL strings, encoded bytes, `ImageData`, and `ImageVectorData`. `tessera_components::material_icons` also ships generated Material icon constants across `filled`, `outlined`, `round`, `sharp`, and `two_tone` styles:
 
 ```rust
 use tessera_components::{icon::icon, material_icons::filled};
+use tessera_ui::tessera;
 
-#[tessera_ui::tessera]
+#[tessera]
 fn settings_symbol() {
     icon().painter(filled::SETTINGS_SVG);
 }
 ```
 
-Themed components such as icons need a `material_theme()` ancestor; see [Material 3 theming](/guide/theming).
+- Encoded images and SVGs load asynchronously; assign an explicit size so surrounding layout does not jump while loading.
+- SVG rendering supports solid-color fills and strokes; convert SVG text to paths and avoid gradients, masks, filters, or embedded bitmaps.
 
-Encoded sources load asynchronously. Native targets read and decode them on workers. The web fetches asynchronously, but decoding currently runs in the browser task, so keep custom web decoders small. While an image or icon is loading, or after a decode failure, it shows no image content. Give it a size to keep the surrounding layout steady when the image arrives.
+## Registering fonts
 
-SVG content is drawn as vector geometry. Paths support solid-color fills and strokes. SVG text, embedded images, gradients, patterns, dashed strokes, clip paths, masks, filters, non-default shape-rendering modes and non-normal blend modes are rejected. Convert text to paths and simplify unsupported artwork before adding it.
-
-The [painter](https://tessera-ui.github.io/tessera/tessera_components/painter/index.html), [image](https://tessera-ui.github.io/tessera/tessera_components/image/index.html) and [icon](https://tessera-ui.github.io/tessera/tessera_components/icon/index.html) API references list the payload and presentation options.
-
-## Fonts
-
-Register fonts as entry packages from `tessera_components::fonts`. `Fonts` takes a static slice of `Font` descriptors. For `assets/fonts/ExampleSans.ttf`:
+Register bundled font assets at `EntryPoint` using `tessera_components::fonts::{Font, Fonts}`:
 
 ```rust
-use tessera_components::{ComponentsPackage, fonts::{Font, Fonts}};
+use tessera_components::{
+    ComponentsPackage,
+    fonts::{Font, Fonts},
+};
 use tessera_ui::EntryPoint;
 
 const APP_FONTS: Fonts = Fonts(&[Font {
@@ -96,17 +84,13 @@ pub fn run() -> EntryPoint {
 }
 ```
 
-Here, `app` is your existing root component. Select the registered family through `TextStyle::font_family`, for example `Some("Example Sans")`. `fallback` holds inclusive Unicode ranges that request this font even when it is not the selected family, which is how you supply glyphs for scripts the main font lacks. `coverage` limits requests to the ranges the font supports; an empty slice allows every range. Font files load when text first needs them.
+Select the font via `TextStyle::font_family` (`Some("Example Sans")`). Use `fallback` for inclusive Unicode ranges where a font supplies missing glyphs even when not selected by family, and `coverage` to restrict which ranges trigger loading that font.
 
-`FontStylesheet("https://example.com/fonts.css")` is an alternative entry package, also registered with `.package(...)`. It discovers fonts from CSS `@font-face` rules and requests their files according to `unicode-range`. Prefer bundled font assets when the app has to work offline. Without registered fonts, native text uses system fonts; web builds include a startup font and request additional default fonts from a CDN.
+For web-hosted font CSS, register `FontStylesheet("https://example.com/fonts.css")` via `.package(...)`. On native targets without custom fonts, `ComponentsPackage` preloads system fonts in the background; on the web, a startup Roboto font is bundled and extra Roboto / Noto Sans SC subsets load on demand.
 
-See the [fonts API](https://tessera-ui.github.io/tessera/tessera_components/fonts/index.html) for registration details and [Text and text input](/guide/text) for text styles.
+## Loading custom data files
 
-## Load data files
-
-For other files, such as JSON, text or a model file, use `Resource::load(source, decode)`. The decoder has the signature `fn(Arc<[u8]>) -> io::Result<T>` and turns the bytes into your type, which must implement `Clone + Send + Sync + 'static`. It is a plain function pointer, so it cannot capture variables.
-
-Keep the resource with `remember`, then read `Resource::get()` during the build:
+Use `Resource::load(source, decode)` for JSON, text, or binary payloads, where `decode` is a plain function pointer `fn(Arc<[u8]>) -> io::Result<T>` (`T: Clone + Send + 'static`):
 
 ```rust
 use std::{io, sync::Arc};
@@ -129,6 +113,4 @@ fn resource_notice() {
 }
 ```
 
-This example reads a native file, or on the web a URL relative to the page. For content that ships with the app, pass a generated asset; an `assets/files/notice.txt` file would be `res::files::NOTICE_TXT`. `LoadState` distinguishes loading, success and failure, so you can show explicit loading and error UI.
-
-Live requests with the same source and decoder share one result. When loading completes, the builds and measurements that read the resource are invalidated and run again. Keep the handle alive for as long as you need the result; when changing the source should create a new resource, remember it under a key as described in [Lifecycle and side effects](/guide/lifecycle).
+Pass `res::files::NOTICE_TXT` for bundled files, or a path/URL string for external files. Live requests with the same source and decoder share one result, and completion automatically invalidates readers; use `remember_with_key` when the source changes dynamically.

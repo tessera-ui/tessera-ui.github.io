@@ -1,15 +1,15 @@
 ---
 title: Project structure
-description: What each file in a new Tessera project does and which ones you are expected to edit.
+description: What each file in a new Tessera project does and where your changes belong.
 ---
 
 # Project structure
 
-A new Tessera project is an ordinary Cargo package with a few extra files that describe your application to the build and to the CLI. Knowing what each one does tells you where a change belongs, and which files the tools manage for you.
+A newly created Tessera project is a standard Cargo package with two TOML manifests and a generated host folder so the same code builds for desktop, mobile, and the browser.
 
-## The files at a glance
+## File layout
 
-`cargo tessera new my-app` creates this layout. The `basic` and `blank` templates produce the same files; only `src/app.rs` differs.
+`cargo tessera new my-app` (with either `--template basic` or `--template blank`) creates:
 
 ```text
 my-app/
@@ -32,11 +32,11 @@ my-app/
 └── .gitignore
 ```
 
-Most of your work happens in `src/`, starting with `src/app.rs`. The configuration files at the root change occasionally, and the files under `gen/` are host files that the CLI creates and extends for each platform.
+Day-to-day UI work stays inside `src/` and `assets/`. The files at the root configure app identity, assets, and permissions, while `gen/` holds platform host wrappers managed by `cargo tessera`.
 
-## Cargo.toml
+## `Cargo.toml`
 
-The manifest builds your code twice: as a library that holds the application, and as a small binary that launches it on desktop. For a project named `my-app` it looks like this:
+The manifest builds your code as both a library (loaded by Android and WebAssembly) and a thin desktop/iOS executable:
 
 ```toml
 [package]
@@ -56,6 +56,10 @@ path = "src/main.rs"
 [dependencies]
 tessera-ui = "..."
 tessera-components = "..."
+tessera-foundation = "..."
+
+[target.'cfg(not(target_family = "wasm"))'.dependencies]
+tokio = "1"
 
 [target.'cfg(target_family = "wasm")'.dependencies]
 wasm-bindgen = "0.2.130"
@@ -64,13 +68,13 @@ wasm-bindgen = "0.2.130"
 tessera-build = "..."
 ```
 
-The CLI fills in the `tessera-*` versions it was released with; they are shown as `"..."` here. The library is also built as a `cdylib` because Android and the web load the application as a dynamic library. `wasm-bindgen` is only used when building for the browser. Add other crates, such as `tessera-shard` or `tessera-i18n`, to `[dependencies]` as you need them.
+The CLI pins matching `tessera-*` versions when creating the project. On native targets, `tokio = "1"` is included because Tessera dispatchers provide a Tokio 1 runtime context out of the box. Add `tessera-shard`, `tessera-i18n`, or `tessera-platform` to `[dependencies]` when your app needs routing, localization, or direct window/clipboard calls.
 
-Platform build settings also live here. Android options go in `[package.metadata.tessera.android]` and iOS options in `[package.metadata.tessera.ios]`; [Platforms](/guide/platforms) and [Packaging and release](/guide/distribution) describe them.
+Platform-specific packaging options also live here under `[package.metadata.tessera.android]` and `[package.metadata.tessera.ios]`. See [Packaging and release](/guide/distribution).
 
-## src/lib.rs: the shared entry
+## `src/lib.rs`: shared entry point
 
-Every platform starts the application from the same function in `src/lib.rs`:
+Every target starts from the same `run()` function in `src/lib.rs`:
 
 ```rust
 mod app;
@@ -105,16 +109,15 @@ pub fn start() -> Result<(), JsValue> {
 }
 ```
 
-`run` names the root component, starts from the configuration generated from `tessera-app.toml`, and registers `ComponentsPackage`, which installs the rendering pipelines and platform services the component library needs. `#[tessera_ui::entry]` also generates the Android entry point from this function. On the web, `start` runs the same entry and points it at the `<canvas>` in `gen/web/index.html`, whose `id` is the library's crate name.
+`run()` registers the root component, loads `res::application()` (window title, app ID, and desktop icon derived from `tessera-app.toml`), and installs `ComponentsPackage`. `#[tessera_ui::entry]` also generates the `android_main` export for Android. On the web, `start()` mounts onto the `<canvas>` in `gen/web/index.html` whose `id` matches the crate name.
 
-This is where you register more packages, fonts, plugins and localization catalogs as the application grows. [Entry point and windows](/guide/app) covers the builder methods and launch variants.
+Additional packages (such as custom fonts, shaders, plugins, and localization catalogs) go on this builder. See [Entry point, windows, and sessions](/guide/app).
 
-## src/main.rs: the desktop and iOS binary
+## `src/main.rs`: desktop and iOS launcher
 
-The binary only calls into the library. For `my-app` the library crate is `my_app_lib`:
+The binary target only forwards to `run()`:
 
 ```rust
-// Prevents additional console window on Windows in release, DO NOT REMOVE
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 #[cfg(all(not(target_family = "wasm"), not(target_os = "android")))]
@@ -132,112 +135,37 @@ fn main() {
 fn main() {}
 ```
 
-Android and the web start the application through the library, so `main` is empty there. Put application setup in `run`, where every platform picks it up; this file rarely changes.
+Android and WebAssembly boot from the `cdylib` rather than `main()`, so `main()` is an empty stub there. You rarely need to touch this file.
 
-## src/app.rs: the root component
+## `src/app.rs`: root component
 
-`src/app.rs` holds the component that `run` passes to `EntryPoint::new`. In the `basic` template it shows a label on a surface that fills the window:
+`src/app.rs` contains the `app()` component passed to `EntryPoint::new(app)`. In the `basic` template it wraps a `text("Hello Tessera!")` inside `material_theme()` and a full-window `surface()`; in `blank` the surface starts empty. Keep `material_theme()` near the root whenever you use `tessera-components` controls so they can read the theme from context.
 
-```rust
-use tessera_components::{
-    modifier::ModifierExt as _,
-    surface::surface,
-    text::text,
-    theme::{MaterialTheme, material_theme},
-};
-use tessera_ui::{Modifier, tessera};
+As your UI grows, split screens and reusable pieces into sibling modules next to `app.rs`.
 
-#[tessera]
-pub fn app() {
-    material_theme()
-        .theme(|| MaterialTheme::default())
-        .child(|| {
-            surface()
-                .modifier(Modifier::new().fill_max_size())
-                .child(|| {
-                    text("Hello Tessera!");
-                });
-        });
-}
-```
+## `build.rs` and `src/res.rs`
 
-The `blank` template has the same theme and surface without the label. Keep the `material_theme()` at the root as you replace the content: Material controls read their colors, typography and shapes from it. Registering `ComponentsPackage` installs rendering and platform services, and the theme comes from `material_theme()`. [Material 3 theming](/guide/theming) explains how to customize it.
+`build.rs` invokes `tessera_build::build()`, which reads `tessera-app.toml` and `tessera-config.toml`, indexes `assets/` and any localization directory, and writes `OUT_DIR/tessera_assets.rs`. `src/res.rs` includes that generated file as `crate::res`.
 
-As the application grows, split screens and reusable pieces into their own modules next to `app.rs`.
+You get `res::application()` out of the box, plus typed constants for every asset file (for example, `res::images::LOGO_SVG` for `assets/images/logo.svg`) and `res::I18N` / `res::i18n()` once localization is configured. See [Assets, images, and fonts](/guide/assets) and [Localization](/guide/i18n).
 
-## build.rs and the res module
+## `tessera-app.toml` and `tessera-config.toml`
 
-The build script runs the Tessera build helper:
+- **`tessera-app.toml`** defines app identity: `name`, reverse-domain `identifier` (at least two dot-separated ASCII segments), and `icon` (a square SVG with outlined text, or a PNG of at least 1024 × 1024).
+- **`tessera-config.toml`** configures build resources and platform capabilities: `permissions` (mapped to platform permission strings), `[assets]` (`dir`, `embed`, `tree_shaking.exclude`), and optional `[i18n]` (`dir`, `fallback`).
 
-```rust
-fn main() {
-    tessera_build::build().expect("Failed to build Tessera resources");
-}
-```
+Both files include a `#:schema` comment at the top so editors with TOML schema support can validate keys as you edit.
 
-It reads `tessera-app.toml` and `tessera-config.toml`, collects the asset directory and any localization catalogs, and writes the result as Rust code to `tessera_assets.rs` in Cargo's `OUT_DIR`. `src/res.rs` includes that file so the rest of the crate can use it as `crate::res`:
+## `gen/` host directories
 
-```rust
-#[allow(missing_docs, clippy::all)]
-mod generated {
-    include!(concat!(env!("OUT_DIR"), "/tessera_assets.rs"));
-}
+- **`gen/web/`**: created with the project. You can customize `index.html`, as long as you leave `<title>` and the `<!-- tessera-app -->` block alone—CLI web commands update those from `tessera-app.toml`. Web builds write `pkg-web/`, `tessera/`, and `app/` alongside it (all gitignored).
+- **`gen/android/`**: generated on demand by `cargo tessera android init` and refreshed on every `android build` or `android dev`. Keep Android settings in `Cargo.toml` and `tessera-config.toml` rather than editing generated Gradle files directly.
+- **iOS**: assembled directly inside Cargo's `target/` directory during `cargo tessera ios build`, with no `gen/` folder required.
 
-pub use generated::*;
-```
+## Other generated files
 
-The generated module always contains `res::application()`, which returns a `TesseraConfig` holding the window title, application ID and desktop icon. It also contains a constant for each asset, such as `res::images::LOGO_SVG` for `assets/images/logo.svg`, and, once you configure localization, the `res::I18N` catalog and its `res::i18n()` package. Cargo regenerates the file whenever those inputs change, so make your changes in the inputs. [Resources](/guide/assets) and [Localization](/guide/i18n) explain those inputs.
-
-## tessera-app.toml: application identity
-
-This file holds what users and operating systems see as the application: its display name, a reverse-domain identifier and the source icon.
-
-```toml
-#:schema https://raw.githubusercontent.com/tessera-ui/tessera/main/docs/schemas/tessera-app.schema.json
-name = "my-app"
-identifier = "com.tessera.myapp"
-icon = "icon.svg"
-```
-
-The CLI starts the name from the package name and derives the identifier from it. Set both to your own values before you ship, because the identifier is what platform manifests, desktop launchers and bundles use to recognize the application. It needs at least two dot-separated segments, each starting with an ASCII letter and containing only ASCII letters and digits.
-
-The icon path is relative to the package root. Use a square SVG, with text converted to paths and external resources embedded, or a square PNG of at least 1024 × 1024. The build and the platform commands read this file when they run, so a change takes effect on the next build. The `#:schema` line lets editors with TOML schema support validate the file.
-
-## tessera-config.toml: assets and platform features
-
-Where `tessera-app.toml` says who the application is, this second configuration file describes what it uses:
-
-```toml
-#:schema https://raw.githubusercontent.com/tessera-ui/tessera/main/docs/schemas/tessera-config.schema.json
-permissions = []
-
-[assets]
-dir = "assets"
-
-[assets.tree_shaking]
-exclude = []
-```
-
-`permissions` lists the platform permissions the application needs, chosen from `notifications`, `camera`, `microphone`, `location` and `bluetooth`; the CLI maps them to each platform's own permission names. `[assets]` points the build helper at the `assets/` directory, and `[assets.tree_shaking]` lists files that must stay available even when no reference to them is found. Add an `[i18n]` table here when you localize the application. [Resources](/guide/assets) and [Localization](/guide/i18n) describe these tables.
-
-## assets/ and icon.svg
-
-`assets/` starts empty. Put images, fonts and other files there and refer to them through the generated `res` constants. `icon.svg` is the placeholder icon named in `tessera-app.toml`; replace it with your own artwork.
-
-## Platform folders under gen/
-
-Platform host projects live under `gen/`. A new project already has `gen/web/index.html`, the page that loads the WebAssembly build into a full-window canvas and shows a loading bar until it starts. You can edit the page, but leave the `<title>` and the region between `<!-- tessera-app -->` and `<!-- /tessera-app -->` to the CLI: every web build rewrites them from `tessera-app.toml`, adding the region the first time.
-
-Web builds add three directories beside it, all listed in `.gitignore`: `gen/web/pkg-web/` for the compiled JavaScript and WebAssembly, `gen/web/tessera/` for assets delivered over HTTP, and `gen/web/app/` for the generated icons and web manifest. In older projects without web support, `cargo tessera web init` creates the host page and adds whatever wiring is missing: the `wasm-bindgen` dependency, the `start` function in `src/lib.rs`, the platform guards in `src/main.rs` and the `.gitignore` entries.
-
-`cargo tessera android init` generates an Android Studio Gradle project in `gen/android/`, including an activity that hosts the Rust library. Put Android settings in `Cargo.toml` and `tessera-config.toml`: each `android init`, `android build` and `android dev` regenerates the Gradle build files, the manifest, the activity and the launcher icons from that configuration, overwriting hand edits to those files. Plugins with Kotlin code are copied in by the same sync.
-
-iOS has no folder under `gen/`: `cargo tessera ios build` assembles the application bundle directly under the Cargo target directory. [Packaging and release](/guide/distribution) describes where each platform's output ends up.
-
-## Other files
-
-`AGENTS.md` tells coding agents how to install Tessera's bundled guidance with `cargo tessera skill`. `README.md` lists the commands to run, serve and build the project. `.gitignore` excludes `target/` and the generated web output; the `basic` template's copy also excludes `Cargo.lock`.
+`AGENTS.md` documents how coding agents can install the bundled `tessera-good-taste` skill via `cargo tessera skill`, `README.md` summarizes common run commands, and `.gitignore` excludes `target/` and generated web output.
 
 ## Next steps
 
-To start changing `src/app.rs`, follow the [Tutorial](/guide/tutorial). For the entry point in depth, read [Entry point and windows](/guide/app).
+If you have not tried the [Tutorial](/guide/tutorial) yet, start there; otherwise move on to [Thinking in Tessera](/guide/thinking-in-tessera) to understand the component execution model in detail.

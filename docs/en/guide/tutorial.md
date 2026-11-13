@@ -1,15 +1,15 @@
 ---
 title: Tutorial
-description: Build a small grocery list app step by step, starting from the basic template.
+description: Turn the basic template into a working grocery list app step by step.
 ---
 
 # Tutorial
 
-In this tutorial you turn the `basic` template into a small grocery list: you can add items, check them off, delete them, scroll through a long list and switch to a dark theme. Each step changes `src/app.rs` a little, tells you what to look for on screen, and links to the page that explains the idea in depth, so you can keep moving now and come back for the details later.
+In this tutorial, you will turn the `basic` template into a small grocery list app: you can type new items, check them off, delete them, scroll when the list grows long, and toggle dark mode. Each step changes a focused part of `src/app.rs` and links to the guide pages that go deeper into each idea.
 
-## Before you start
+## Setup
 
-Create a project from the `basic` template and start the development loop, as described in [Getting started](/guide/getting-started):
+Create the project and start the desktop dev loop as described in [Getting started](/guide/getting-started):
 
 ```sh
 cargo tessera new groceries --template basic
@@ -17,17 +17,17 @@ cd groceries
 cargo tessera dev
 ```
 
-Leave `dev` running while you work. Every time you save, it rebuilds and restarts the app. Because the process restarts, the app starts fresh after each save and anything you typed into it is cleared; that is expected.
+Leave `cargo tessera dev` running in the background while you work. Every time you save `src/app.rs`, it rebuilds and restarts the window (which clears any items you typed during the previous run—that is expected).
 
-Open `src/app.rs`. The template gives you this:
+Open `src/app.rs`. The template starts like this:
 
 ```rust
 use tessera_components::{
-    modifier::ModifierExt as _,
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Modifier, tessera};
 
 #[tessera]
@@ -44,19 +44,19 @@ pub fn app() {
 }
 ```
 
-Read it from the outside in. `material_theme()` makes a Material theme available to everything inside it, and the Material controls you add later rely on it. `surface()` fills the window and paints the theme's background. `text` shows the greeting. Containers take their content as closures, which is why each level is a `.child(|| { ... })`.
+Reading from outside in: `material_theme()` provides Material theme defaults to everything below it, `surface()` fills the window and paints the theme's background color, and `text` shows the greeting. Containers take child UI as closures, so each layer nests with `.child(|| { ... })`.
 
 ## Step 1: Write your own component
 
-A component is a Rust function marked with `#[tessera]`. Add one for a single grocery item and call it in place of the greeting:
+A component is a Rust function annotated with `#[tessera]`. Write a `grocery_item` component and display it instead of the greeting:
 
 ```rust
 use tessera_components::{
-    modifier::ModifierExt as _,
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Modifier, tessera};
 
 #[tessera]
@@ -78,23 +78,23 @@ fn grocery_item(#[prop(into)] name: String) {
 }
 ```
 
-The window now shows "Milk" where the greeting was.
+Save the file and the window now shows "Milk".
 
-`name` is a plain `String`, so it is a required argument of `grocery_item`. `#[prop(into)]` lets callers pass anything that converts into a `String`, such as the `&str` literal here. Calling `grocery_item("Milk")` declares that this component appears at that point in the tree, and Tessera runs it when it builds the UI. [Thinking in Tessera](/guide/thinking-in-tessera) explains this model.
+Because `name` is a plain `String` (not `Option<String>`), it is a required positional argument when calling `grocery_item`. `#[prop(into)]` generates an `impl Into<String>` parameter so you can pass a `&str` literal like `"Milk"` directly. Calling `grocery_item("Milk")` declares that this component belongs at this spot in the tree; Tessera runs its body when building the UI. See [Thinking in Tessera](/guide/thinking-in-tessera).
 
 ## Step 2: Arrange items in a column
 
-A list needs several items. Move the screen into its own `grocery_screen` component, which stacks a title and a few items in a `column`:
+A list needs more than one item. Move the screen layout into a `grocery_screen` component and use `column` to stack a heading above a few items:
 
 ```rust
 use tessera_components::{
     column::column,
-    modifier::ModifierExt as _,
     spacer::spacer,
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
@@ -129,13 +129,13 @@ fn grocery_item(#[prop(into)] name: String) {
 }
 ```
 
-You now see a "Groceries" heading with three items under it, inset 16 dp from the window edges.
+You now see the "Groceries" heading and three padded rows, inset 16 dp from the window edges.
 
-`column` places its children top to bottom in the order you declare them. Size and spacing come from the `Modifier` chain: the column fills the surface and pads its content, a `spacer` with a fixed height adds a gap, and each item gets some vertical padding so the rows have room between them. Sizes are written in `Dp`, which Tessera converts to pixels for the screen's density. Splitting out `grocery_screen` keeps `app` about app-wide setup, which pays off in step 6. See [Layout basics](/guide/layout) and [Modifiers](/guide/modifiers).
+`column` stacks children top to bottom in call order. Sizes and spacing come from `Modifier` chains: the column fills the surface with outer padding, a fixed-height `spacer` creates a gap under the heading, and each item adds vertical padding. Dimensions use density-independent pixels (`Dp`) so physical sizing scales across displays. Keeping `app` focused on app-wide setup also prepares for theme state in Step 6. See [Layout basics](/guide/layout) and [Modifiers](/guide/modifiers).
 
-## Step 3: Add items with a text field
+## Step 3: Add items from a text field
 
-A real list starts empty and grows as you type. That needs three pieces: state that holds the items, a text field, and an action that moves the field's text into the list. Replace `src/app.rs` with this:
+A real list starts empty and grows from user input. You need three things: state for the items, a text field, and an action that appends to the list and clears the field. Update `src/app.rs`:
 
 ```rust
 use tessera_components::{
@@ -143,7 +143,6 @@ use tessera_components::{
     boxed::boxed,
     button::button,
     column::column,
-    modifier::ModifierExt as _,
     row::row,
     spacer::spacer,
     surface::surface,
@@ -152,6 +151,7 @@ use tessera_components::{
     text_input::TextInputController,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Callback, Dp, Modifier, key, remember, tessera};
 
 #[tessera]
@@ -204,13 +204,15 @@ fn grocery_screen() {
                 .modifier(Modifier::new().fill_max_width())
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .children(move || {
-                    boxed().modifier(Modifier::new().weight(1.0)).children(move || {
-                        text_field()
-                            .modifier(Modifier::new().fill_max_width())
-                            .controller(editor)
-                            .label("Add an item")
-                            .on_submit_shared(add);
-                    });
+                    boxed()
+                        .modifier(Modifier::new().weight(1.0))
+                        .children(move || {
+                            text_field()
+                                .modifier(Modifier::new().fill_max_width())
+                                .controller(editor)
+                                .label("Add an item")
+                                .on_submit_shared(add);
+                        });
                     spacer().modifier(Modifier::new().width(Dp(8.0)));
                     button().on_click_shared(add).child(|| text("Add"));
                 });
@@ -223,17 +225,17 @@ fn grocery_screen() {
 }
 ```
 
-The list now starts empty. Under the heading there is a text field with an Add button beside it. Type a name and click Add, or press Enter, and the item appears below while the field clears.
+Type an item name and click **Add** (or press Enter): the item appears below and the input clears.
 
-A component function runs again whenever Tessera rebuilds it, so a plain local `Vec` would start empty every time. `remember` keeps a value across rebuilds and hands you a `State` handle. Its initializer runs only once, when the state is first created. Because the column's content reads `items` while it builds, writing to `items` from the action makes that content rebuild with the new list. [State](/guide/state) covers this in detail.
+Component bodies run again on rebuild, so an ordinary local `Vec` would reset on every update. `remember` preserves values across rebuilds and gives you a `Copy` handle (`State<T>`). Because `column`'s children closure calls `items.get()`, writing to `items` schedules a rebuild of that subtree. See [State and sharing](/guide/state).
 
-The text field keeps its text in a `TextInputController`. Remembering your own controller, instead of letting the field create one, is what lets the action read the text and clear it. `Callback::new` wraps the action in a handle that stays the same across rebuilds, so the button and the field's Enter key can share it through their `_shared` setters. In the row, `weight(1.0)` hands the box all the width the button and the gap leave over, and the field fills that box.
+The text field stores its buffer in `TextInputController`; remembering the controller yourself lets the `add` action read and clear it. Wrapping the closure in `Callback::new` creates a reusable handle so both the button and the field's Enter handler can share it via `_shared` setters. Inside the row, `.weight(1.0)` gives the boxed wrapper all width remaining after the spacer and button, and `fill_max_width()` stretches the text field to fill that box.
 
-Finally, `key(item.id, ...)` ties each row to its item's id, whatever its position in the list. That starts to matter in the next step: once items can be removed, it keeps every row attached to the right item. [Lifecycle and side effects](/guide/lifecycle) explains identity and keys, and [Text and text input](/guide/text) covers the field and its controller.
+Finally, `key(item.id, ...)` binds each rendered row to its item ID instead of its loop index, which matters as soon as items can be deleted in the next step. See [Identity, lifecycle, and effects](/guide/lifecycle) and [Text and text input](/guide/text).
 
 ## Step 4: Check off and delete items
 
-Next, give every item a checkbox and a delete button. The item needs a `done` flag, and `grocery_item` needs a way to report what the user did. Update the imports, the `Grocery` struct and `grocery_item`, and add two small helpers that change the list:
+Now give each item a `done` flag, a checkbox, and a delete icon button. Update the imports, `Grocery`, and `grocery_item`, and add two small mutation helpers:
 
 ```rust
 use tessera_components::{
@@ -244,7 +246,6 @@ use tessera_components::{
     column::column,
     icon_button::icon_button,
     material_icons::filled,
-    modifier::ModifierExt as _,
     row::row,
     spacer::spacer,
     surface::surface,
@@ -253,6 +254,7 @@ use tessera_components::{
     text_input::TextInputController,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Callback, CallbackWith, Dp, Modifier, State, key, remember, tessera};
 
 #[derive(Clone, PartialEq)]
@@ -280,8 +282,7 @@ fn grocery_item(item: Grocery, on_checked_change: CallbackWith<bool>, on_delete:
         .modifier(Modifier::new().fill_max_width())
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .children(move || {
-            checkbox()
-                .checked(item.done)
+            checkbox(item.done)
                 .accessibility_label(item.name.clone())
                 .on_toggle_shared(on_checked_change);
             text(item.name.clone()).modifier(Modifier::new().weight(1.0));
@@ -294,7 +295,7 @@ fn grocery_item(item: Grocery, on_checked_change: CallbackWith<bool>, on_delete:
 }
 ```
 
-In `grocery_screen`, the `add` action now pushes `Grocery { id, name, done: false }`. Then replace the `for` loop at the end of the column with one that passes each item its callbacks:
+In `grocery_screen`, update `add` to push `Grocery { id, name, done: false }`, and replace the `for` loop at the end of the column with:
 
 ```rust
             for item in items.get() {
@@ -309,15 +310,13 @@ In `grocery_screen`, the `add` action now pushes `Grocery { id, name, done: fals
             }
 ```
 
-Each row now starts with a checkbox and ends with a trash-can button. Checking an item ticks its box; the trash can removes the row.
+Each row now has a leading checkbox and a trailing trash button.
 
-`grocery_item` receives the item to show and two callbacks, and it reports events through them; `grocery_screen` owns the list and decides what an event means. This pattern, called state hoisting, keeps a single copy of the data, so the checkbox and the list always agree. The checkbox is controlled in the same way: `checked` comes from the data, and `on_toggle` sends the new value back up to the owner of that data.
+Notice how `grocery_item` owns no state: it takes the current `item` value and reports user actions through callbacks, while `grocery_screen` remains the single source of truth for `items`. That pattern is state hoisting. Notice also that required callback parameters (`Callback` and `CallbackWith<bool>`) accept closures directly at the call site, and `checkbox(item.done)` takes its checked state as a required argument. Setting `accessibility_label` on the icon button gives screen readers and UI tests a clear name for an icon-only control. See [State and sharing](/guide/state#lifting-state-to-the-caller) and [Semantics and accessibility](/guide/accessibility).
 
-Required callback parameters such as `on_delete: Callback` accept closures directly at the call site. The closures capture `items`, which is a cheap copyable handle, and the `id`, so they own everything they use. Because the delete button shows only an icon, `accessibility_label` gives it a name that screen readers can announce. [State](/guide/state) covers hoisting, [Gestures and interaction](/guide/interaction) covers actions, and [Accessibility](/guide/accessibility) covers labelling.
+## Step 5: Make long lists scroll
 
-## Step 5: Scroll a long list
-
-Add a dozen items and the last ones fall off the bottom of the window, because a `column` lays out everything you give it at full length, past the window edge. Swap the `for` loop for a `lazy_column`, which scrolls and only builds the rows that are in view. Add `lazy_list::lazy_column` to the `tessera_components` import, remove `key` from the `tessera_ui` import (the list handles keys now), and replace the loop:
+Add a dozen items and the bottom ones overflow the window: `column` builds and lays out every child at once. Replace the `for` loop with `lazy_column`, which scrolls and builds only the items visible in its viewport. Add `lazy_list::lazy_column` to the `tessera_components` imports, remove `key` from the `tessera_ui` imports (the lazy list tracks keys directly), and replace the loop:
 
 ```rust
             lazy_column()
@@ -336,13 +335,13 @@ Add a dozen items and the last ones fall off the bottom of the window, because a
                 );
 ```
 
-With more items than fit, the list now scrolls with the mouse wheel or touch, while the heading and text field stay in place.
+When the list exceeds the remaining vertical space, it scrolls with the mouse wheel or touch while the heading and input row stay pinned at the top.
 
-A scrolling list needs a finite height to scroll within. `weight(1.0)` gives it whatever height the column has left after the heading and the input row, which works because the column itself fills the window. The second argument returns each item's key, so rows keep following their item as the list changes. A row's local state ends when the row scrolls out of view, even with a key; here the list data lives in `grocery_screen`, so every item keeps its data while you scroll. [Lists and scrolling](/guide/lists) explains viewports, keys and controllers.
+A scrollable container needs bounded height along its scroll axis. `.weight(1.0)` gives `lazy_column` whatever height remains inside the full-size `column`. The second closure returns each item's stable key so rows stay matched to their records as items are removed. Because all item data lives in `grocery_screen`, scrolling an item offscreen and back never drops its checked state. See [Lists, grids, and scrolling](/guide/lists).
 
-## Step 6: Theme the app
+## Step 6: Theme the app and add dark mode
 
-The app still uses the default light theme. Give it its own color, a stronger heading and a dark-mode switch. Store the dark-mode flag in `app`, derive the theme from it, and pass the flag down to the screen:
+So far the app uses the default light palette. Let's pick a green seed color, give the heading a Material typography role, and add a dark-mode toggle. Store the `dark` flag in `app`, generate the theme from it, and pass the handle down:
 
 ```rust
 #[tessera]
@@ -360,7 +359,7 @@ pub fn app() {
 }
 ```
 
-`grocery_screen` takes the flag, reads the title style from the theme, and puts a toggle button next to the heading:
+Update `grocery_screen` to take `dark: State<bool>`, read the heading style from `MaterialTheme`, and place an icon button beside the heading:
 
 ```rust
 #[tessera]
@@ -407,13 +406,15 @@ fn grocery_screen(dark: State<bool>) {
                 .modifier(Modifier::new().fill_max_width())
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .children(move || {
-                    boxed().modifier(Modifier::new().weight(1.0)).children(move || {
-                        text_field()
-                            .modifier(Modifier::new().fill_max_width())
-                            .controller(editor)
-                            .label("Add an item")
-                            .on_submit_shared(add);
-                    });
+                    boxed()
+                        .modifier(Modifier::new().weight(1.0))
+                        .children(move || {
+                            text_field()
+                                .modifier(Modifier::new().fill_max_width())
+                                .controller(editor)
+                                .label("Add an item")
+                                .on_submit_shared(add);
+                        });
                     spacer().modifier(Modifier::new().width(Dp(8.0)));
                     button().on_click_shared(add).child(|| text("Add"));
                 });
@@ -435,15 +436,11 @@ fn grocery_screen(dark: State<bool>) {
 }
 ```
 
-Add `Color` and `use_context` to the `tessera_ui` import. The button, checkboxes and field now take on a green palette, the heading is larger, and the moon button at the top right switches the whole app between light and dark.
+Add `Color` and `use_context` to the `tessera_ui` imports. Controls switch to the green palette, the heading scales up, and the moon icon toggles light and dark themes across the entire app. See [Material 3 theming](/guide/theming).
 
-`MaterialTheme::from_seed` derives a complete color scheme from one seed color, and its second argument picks the light or dark variant. Because the theme closure reads `dark` each time it runs, flipping the flag rebuilds the theme, and every component that reads it updates. Tessera doesn't follow the operating system's dark mode on its own, so state like this is how you give the user the choice. Inside the screen, `use_context::<MaterialTheme>()` reads the nearest theme, which is how the heading picks up the theme's `headline_small` style. [Material 3 theming](/guide/theming) covers color roles, typography and shapes.
+## Complete `src/app.rs`
 
-## The finished app
-
-Here is the complete `src/app.rs` after the last step:
-
-::: details src/app.rs
+::: details Full source for src/app.rs
 ```rust
 use tessera_components::{
     alignment::CrossAxisAlignment,
@@ -454,7 +451,6 @@ use tessera_components::{
     icon_button::icon_button,
     lazy_list::lazy_column,
     material_icons::filled,
-    modifier::ModifierExt as _,
     row::row,
     spacer::spacer,
     surface::surface,
@@ -463,6 +459,7 @@ use tessera_components::{
     text_input::TextInputController,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{
     Callback, CallbackWith, Color, Dp, Modifier, State, remember, tessera, use_context,
 };
@@ -492,8 +489,7 @@ fn grocery_item(item: Grocery, on_checked_change: CallbackWith<bool>, on_delete:
         .modifier(Modifier::new().fill_max_width())
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .children(move || {
-            checkbox()
-                .checked(item.done)
+            checkbox(item.done)
                 .accessibility_label(item.name.clone())
                 .on_toggle_shared(on_checked_change);
             text(item.name.clone()).modifier(Modifier::new().weight(1.0));
@@ -563,13 +559,15 @@ fn grocery_screen(dark: State<bool>) {
                 .modifier(Modifier::new().fill_max_width())
                 .cross_axis_alignment(CrossAxisAlignment::Center)
                 .children(move || {
-                    boxed().modifier(Modifier::new().weight(1.0)).children(move || {
-                        text_field()
-                            .modifier(Modifier::new().fill_max_width())
-                            .controller(editor)
-                            .label("Add an item")
-                            .on_submit_shared(add);
-                    });
+                    boxed()
+                        .modifier(Modifier::new().weight(1.0))
+                        .children(move || {
+                            text_field()
+                                .modifier(Modifier::new().fill_max_width())
+                                .controller(editor)
+                                .label("Add an item")
+                                .on_submit_shared(add);
+                        });
                     spacer().modifier(Modifier::new().width(Dp(8.0)));
                     button().on_click_shared(add).child(|| text("Add"));
                 });
@@ -592,8 +590,8 @@ fn grocery_screen(dark: State<bool>) {
 ```
 :::
 
-Before you commit, run `cargo tessera check`. It checks that components are only called where UI can be built, then compiles the project.
+Run `cargo tessera check` before committing to make sure all call-boundary and compiler checks pass.
 
 ## Next steps
 
-You have now used most of the ideas that a Tessera app is built from. [Thinking in Tessera](/guide/thinking-in-tessera) explains the model behind them, and [State](/guide/state) goes deeper into who owns data and when the UI rebuilds. To see what else the component library offers, browse the [component API reference](https://tessera-ui.github.io/tessera/tessera_components/) or the [running gallery](https://tessera-ui.github.io/tessera/example/).
+You have just used most of the core pieces of a Tessera app. Read [Thinking in Tessera](/guide/thinking-in-tessera) and [State and sharing](/guide/state) to solidify the mental model behind what you wrote, or check the [component API reference](https://tessera-ui.github.io/tessera/tessera_components/) for other controls you can drop in.

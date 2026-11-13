@@ -1,19 +1,15 @@
 ---
 title: Thinking in Tessera
-description: How declarative components, props and rebuilds fit together in Tessera.
+description: Write #[tessera] components, configure handles, compose with RenderSlot and Callback, and follow call-boundary rules.
 ---
 
 # Thinking in Tessera
 
-In Tessera you describe what the interface should look like for the current data, and the framework works out what to change on screen. To update the screen, you change the data, and the components that depend on it run again and describe the new interface. Once that idea clicks, the rest of the API follows from it.
-
-## Describe the UI for the current data
-
-A component is a function that takes data and declares UI. When the data changes, Tessera calls the function again, which is called a *rebuild*, and the new declaration replaces the old one. The screen always comes from the latest declaration, so it stays in agreement with the data. Since Tessera only rebuilds the parts that can have changed, describing the whole component again is cheap.
+In Tessera, you declare what the UI should be for the current state rather than mutating widgets by hand. When state changes, Tessera re-runs the affected components and reconciles the screen with the new declarations.
 
 ## Components are functions
 
-Mark a Rust function with `#[tessera]` to make it a component. Non-optional parameters become required arguments that you pass in the call. `Option<T>` parameters become named builder setters, and you resolve their defaults inside the function body:
+Annotate a Rust function with `#[tessera]` to define a component. Non-optional parameters become required positional arguments; `Option<T>` parameters become optional chainable setters on the returned configuration handle.
 
 ```rust
 use tessera_components::text::text;
@@ -31,18 +27,17 @@ fn greeting_demo() {
 }
 ```
 
-A few things are worth noticing here:
+Follow these conventions when designing component parameters:
 
-- The function returns nothing: calling `text(...)` declares a text element as part of `greeting`.
-- `#[prop(into)]` lets callers pass anything convertible to the prop type, so `"Ada"` works where a `String` is expected.
-- Defaults live in the function body. Declare the parameter as `Option<T>` and decide the default there, as `excited.unwrap_or(false)` does.
-- Props own their data, so pass owned strings and stable handles. Tessera compares props when deciding whether a child must run again, so prop types implement `Clone` and `PartialEq`.
+- **Required vs. optional**: keep mandatory inputs as plain types (`name: String`), and declare optional inputs as `Option<T>` with explicit defaults resolved in the body (`excited.unwrap_or(false)`).
+- **Use `#[prop(into)]`** on string or convertible fields so callers can pass `"Ada"` directly.
+- **Keep props owned and comparable**: parameter types must implement `Clone + 'static` (and `PartialEq` unless marked `#[prop(skip_eq)]`).
 
-These examples are components that run inside your app, beneath its `material_theme()`. See the [Introduction](/guide/) for a complete root component, and [Theming](/guide/theming) for the theme itself.
+Examples on this page run inside an app's `material_theme()`. See [Material 3 theming](/guide/theming).
 
-## Dynamic content is ordinary Rust
+## Control flow is plain Rust
 
-Because components are plain functions, you use plain Rust for control flow. A loop declares one element per item, and an `if` decides whether something exists at all:
+Conditional UI and repetition use ordinary `if`, `match`, and `for`:
 
 ```rust
 use tessera_components::{column::column, text::text};
@@ -58,13 +53,11 @@ fn greetings(names: Vec<String>) {
 }
 ```
 
-When the items can be reordered and carry state, give each one a key so its state follows it; [Lifecycle and side effects](/guide/lifecycle#identify-items-with-keys) explains why.
+When loop items can reorder, insert, or delete while holding local state, wrap each item with `key(...)`. See [Identity, lifecycle, and effects](/guide/lifecycle#identifying-reordered-items-with-key).
 
-## A call declares a use
+## Calls fix order; handles configure options
 
-Calling a component registers one use of it right away and returns a typed configuration handle. The component's body runs later in the same build, when Tessera expands the declarations, before layout and drawing.
-
-The order of the calls is the order in the tree. Setters configure the pending use and leave its position as it is:
+Calling a component registers one UI use in call order and returns a configuration handle. Even if you bind handles to local variables and configure them out of order, the resulting UI stays in call order:
 
 ```rust
 use tessera_components::{row::row, text::text};
@@ -75,19 +68,18 @@ fn heading() {
     row().children(|| {
         let title = text("Title");
         let description = text("Description");
+
         description.size(Dp(14.0));
         title.size(Dp(24.0));
     });
 }
 ```
 
-Title comes before Description even though Description is configured first. The use keeps its place and still happens if you move, save or drop the handle. Chaining is the usual form, but ordinary Rust helpers can configure a handle too.
+`Title` appears before `Description`. Configure a handle immediately after creating it, and do not store handles across builds—use [State](/guide/state) and controllers for changes after the initial declaration.
 
-A handle is only configurable while its use is pending. Once that use starts executing, its props are final and further setters panic. Expanding a render slot can commit earlier pending declarations in the same build, so configure a handle right after you create it. Handles describe a single build, so keep them local to that build: the next build creates new ones even when the component's identity and remembered state are unchanged. Keep anything that must last in [state](/guide/state) and controllers.
+## Passing child UI with `RenderSlot`
 
-## Compose components
-
-You customize by wrapping one component in another and by passing content into it. Containers take child content as build closures, and your own components can do the same with `RenderSlot`:
+Accept deferred child content with `RenderSlot` (or `RenderSlotWith<T>` when passing a value down to the slot):
 
 ```rust
 use tessera_components::{column::column, text::text};
@@ -109,13 +101,11 @@ fn page() {
 }
 ```
 
-The parent decides whether, where and in which context the slot is expanded. A slot declares its content only when it is rendered. When the content needs a value from its parent, use `RenderSlotWith<T>`.
+The parent controls if, when, and in what context a slot renders. Pass closures directly to `.child(|| ...)` or `.children(|| ...)`; construct `RenderSlot::new(...)` and pass it via `_shared` setters only when storing or forwarding an existing slot. Never pass a component call as an argument expecting a slot—component calls register in the caller immediately.
 
-Child content is a closure that calls components when the slot is expanded. A component handle is a declaration that has already taken its place in the tree where it was called, so to put a component inside a container, call it inside the container's closure. Pass closures directly, and construct `RenderSlot::new(...)` only when the content needs independent storage or forwarding, then hand it over with the matching `_shared` setter.
+## Reporting events with `Callback`
 
-## Data flows down, events flow up
-
-A component receives data through props and reports what happened through callbacks. Declare callback props as `Callback`, or `CallbackWith<T, R>` when the callback takes a value:
+Pass data down through props and report actions up through `Callback` or `CallbackWith<T, R>`:
 
 ```rust
 use tessera_components::{button::button, text::text};
@@ -133,26 +123,25 @@ fn click_counter(clicks: u32, on_click: Option<Callback>) {
 }
 ```
 
-`click_counter` shows the number it was given and tells its caller when it was clicked; the counting happens in the caller. The caller updates its state, Tessera rebuilds what read that state, and `click_counter` runs again with the new number. [State](/guide/state#hoist-state-to-the-caller) shows the caller's side.
+Callbacks require owned `'static` captures and run on the UI thread, so they do not need `Send + Sync`. When a callback needs current data, capture a `State<T>` handle and read it inside the callback.
 
-`Callback::call()` takes no argument; `CallbackWith<T, R>::call(value)` takes a `T` and returns an `R`, which defaults to `()`. Generated setters accept closures, and `_shared` setters accept an existing callback handle. Stored callbacks and slots need owned captures that are `Send + Sync + 'static`. When an action needs current data, capture a `State<T>` handle and read it when the action runs; that way the action sees the latest value.
+## Execution boundaries
 
-## How rebuilding works
+Tessera enforces a clean split between **UI-building code** and **ordinary Rust code**:
 
-When state that a component read during its build changes, Tessera marks that component for rebuilding and runs that one body again. A parent that only passed a handle along stays as it is, and when a parent does rebuild, a child whose props compare equal and whose own build is clean can be skipped entirely. Changed props can also make a child run, even when the state it reads is unchanged. The [rendering guide](/guide/rendering) covers what happens after the build.
+- **Build contexts**: `#[tessera]` and `#[shard]` functions, root entry closures (`EntryPoint::new`, `UiTest::content`), and render-slot closures (`RenderSlot`, `RenderSlotWith`, `key`, `provide_context`, and built-in container content closures).
+- **Ordinary Rust**: helpers, methods, event callbacks (`on_click`, `on_change`), iterator combinators (`.map(...)`, `.unwrap_or_else(...)`), and async tasks.
 
-This has consequences for how you write component bodies:
+Call components and build-scoped APIs (`remember`, `retain`, `use_context`, `provide_context`, `launch`, `key`, `RenderSlot::new`) only inside build contexts. To share reusable UI snippets, extract a `#[tessera]` function; to react to user input, update state in the callback and let the UI rebuild. Run `cargo tessera check` to verify these boundaries before building.
 
-- **A body can run many times, or not at all.** Tessera decides how often based on what changed. Keep the body repeatable: compute values and declare children there. Start network requests, file writes and similar work from actions or initializers, see [where side effects belong](/guide/lifecycle#run-side-effects-outside-the-build); work placed in the body, including counting its calls, would repeat or be skipped as rebuilds vary.
-- **Pass data through props and state.** Siblings are laid out in declaration order, but whether a particular body runs in a given rebuild depends on what is dirty, so a state write in one body reaches another body only if that body happens to run afterwards. A write during a build also makes readers that already ran with the old value rebuild again.
-- **Build UI only in build contexts.** Components and recognized build closures (child setters, render slots and root callbacks such as `EntryPoint::new`) declare UI, and a plain `for` loop inside a build works too. Event callbacks, closures passed to iterator adapters such as `map`, and ordinary helpers sit outside that context. An action changes state, and the next build declares the new interface.
+## Keeping component bodies pure
 
-`cargo tessera check` verifies these call boundaries. A helper becomes a component only through the attribute, even when a component calls it, so annotate any helper that declares UI with `#[tessera]`.
+Component bodies may run repeatedly when inputs or read state change, or be skipped when unchanged:
 
-## Advanced props
-
-The macro also supports generic components. `#[prop(skip_setter)]` hides an internal backing field from the builder. `#[prop(skip_eq)]` leaves a field out of the prop comparison mentioned above; use it only when skipping that comparison cannot hide a real change to the UI.
+- Compute derived values and declare child UI in the body; keep I/O, timers, and requests in event callbacks, slot initializers, or `launch`.
+- Do not write to `State` during a build; update state from actions or tasks.
+- When a prop field should be hidden from the builder or excluded from prop diffing, use `#[prop(skip_setter)]` or `#[prop(skip_eq)]`.
 
 ## Next steps
 
-Components get interesting once they hold data that changes. Continue with [State](/guide/state).
+Continue to [State and sharing](/guide/state) to manage component-local, screen-scoped, and inherited data.

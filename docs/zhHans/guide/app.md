@@ -1,13 +1,11 @@
 ---
-title: 应用入口与窗口
-description: 用同一个入口在各个平台启动应用，并配置窗口、应用标识和标题栏。
+title: 应用入口、窗口与会话
+description: 用一个 EntryPoint 覆盖全平台启动，配置窗口、应用标识、集成标题栏与 RuntimeSession。
 ---
 
-# 应用入口与窗口
+# 应用入口、窗口与会话
 
-每个 Tessera 应用都从一个 `EntryPoint` 启动。它把根组件和渲染器、平台服务以及窗口连接起来。你只需要在一个函数里构建它，再让各平台的启动代码调用这个函数，桌面、Web、Android 和 iOS 就会以同一套配置启动同一个应用。
-
-`basic` 项目模板把这个函数放在 `src/lib.rs` 中。它依赖模板生成的 `src/app.rs`、`src/res.rs` 和 `build.rs`，这些文件各自的作用见[项目结构](/zhHans/guide/project-structure)。
+每个 Tessera 应用都从一个 `EntryPoint` 启动，它把根组件、渲染配置、组件包和插件串在一起。在 `src/lib.rs` 写好一次，所有平台就都走同一套初始化流程。
 
 ```rust
 mod app;
@@ -42,13 +40,11 @@ pub fn start() -> Result<(), JsValue> {
 }
 ```
 
-`app` 是一个普通的 `#[tessera]` 组件。使用 Material 组件时，要在它的最外层放一个 `material_theme()`：`ComponentsPackage` 负责安装渲染管线，主题由 `material_theme()` 提供。详见 [Material 3 主题](/zhHans/guide/theming)。
+使用 `tessera-components` 时，在 `app` 最外层包上 `material_theme()`：`ComponentsPackage` 负责安装渲染管线与平台服务，`material_theme()` 负责向下提供设计主题。
 
-## 在各个平台启动
+## 各平台启动方式
 
-`#[tessera_ui::entry]` 标注在返回 `EntryPoint` 的公共无参函数上。在 Android 上，它会生成 `android_main`，并把宿主提供的 `AndroidApp` 传给 `run_android`，Android 平台到此就齐了。Web 上的 `start` 函数（见上文）以及桌面和 iOS 上的 `main` 由你自己编写。
-
-`main` 位于 `src/main.rs`。项目名为 `notes` 时，模板的库 crate 名为 `notes_lib`，`main` 这样启动共享入口：
+`#[tessera_ui::entry]` 标在无参返回 `EntryPoint` 的公开函数上，并会为 Android 生成 `android_main` 胶水。桌面和 iOS 通过 `src/main.rs` 启动：
 
 ```rust
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
@@ -68,36 +64,28 @@ fn main() {
 fn main() {}
 ```
 
-每个启动方法只在它支持的目标上存在，所以每次调用都要放在 `cfg` 条件之后。选择发生在编译期：
-
-| 方法 | 可用目标 |
+| 启动方法 | 适用目标 |
 | --- | --- |
-| `run_desktop()` | Android 和 iOS 之外的原生目标。 |
-| `run_ios()` | iOS；必须在应用主线程调用。 |
-| `run_android(android_app)` | Android。 |
-| `run_web()` | `wasm` 目标族。 |
-| `into_headless(config)` | 启用 `headless` feature 的非 `wasm` 目标。 |
+| `run_desktop()` | 桌面原生平台（`cargo tessera headless` 也会复用此入口进入离屏模式） |
+| `run_ios()` | iOS（必须在主线程调用） |
+| `run_android(android_app)` | Android |
+| `run_web()` | `wasm` 目标 |
+| `into_headless(config)` | 启用 `headless` feature 的非 `wasm` 目标 |
 
-这些方法都会消耗 `EntryPoint`。无头渲染用于离屏测试，见[测试](/zhHans/guide/testing)；各原生宿主的要求见[平台概览](/zhHans/guide/platforms)。
+## 注册包、渲染模块与插件
 
-## 注册应用服务
-
-启动之前，先告诉入口应用要用到哪些服务。下面这些构建方法负责注册：
-
-| 构建方法 | 注册或设置的内容 |
+| 方法 | 用途 |
 | --- | --- |
-| `.package(package)` | 通过 `EntryRegistry` 组织多项注册的 `TesseraPackage`。 |
-| `.module(module)` | 注册图形管线的 `RenderModule`。 |
-| `.plugin(plugin)` | 由当前应用会话拥有的 `Plugin` 实例。 |
-| `.config(config)` | 渲染器与窗口使用的 `TesseraConfig`。 |
+| `.package(package)` | 安装 `TesseraPackage`（组合多个模块、插件和子包） |
+| `.module(module)` | 通过 `RenderModule` 注册自定义 GPU 管线 |
+| `.plugin(plugin)` | 注册由当前会话持有的 `Plugin` |
+| `.config(config)` | 设置窗口、Web 与 GPU 选项（`TesseraConfig`） |
 
-大多数应用只需要一个包。`ComponentsPackage` 会注册标准组件的管线，同时注册 `tessera_platform::PlatformPackage`，后者提供组件依赖的平台服务。只要用 `tessera-components` 构建应用，就应注册它。字体包也用同样的方式注册，见[资源](/zhHans/guide/assets#字体)。自己的集成见[平台集成与插件](/zhHans/guide/plugins)和[绘制与着色器](/zhHans/guide/drawing)。
+使用组件库时务必注册 `ComponentsPackage`（它会自动带上提供剪贴板与窗口服务的 `PlatformPackage`）。自定义字体、管线和插件详见[资源、图片与字体](/zhHans/guide/assets#字体)、[自定义绘制与着色器](/zhHans/guide/drawing)与[平台集成与插件](/zhHans/guide/plugins)。
 
-## 配置窗口
+## 配置窗口与应用标识
 
-`TesseraConfig` 包含窗口标题、桌面 `window` 选项（`WindowConfig`）、`web` 宿主选项，以及 `sample_count` 等 GPU 设置。`sample_count` 默认为 `1`，其他采样数需要 GPU 支持。每个 `EntryPoint` 运行一个窗口。
-
-在生成的项目中，应以 `res::application()` 为起点，而不是 `TesseraConfig::default()`。生成的配置已经带有来自[应用标识](#应用标识)的窗口标题、应用 ID 和桌面图标；在它的基础上调整某个运行时选项，这些信息会原样保留。下面这个版本的 `run` 让桌面窗口不能调整大小：
+在生成的项目里，基于 `res::application()` 修改选项，不要直接从 `TesseraConfig::default()` 起步，这样来自 `tessera-app.toml` 的标题、应用 ID 和图标都会自动保留：
 
 ```rust
 #[tessera_ui::entry]
@@ -111,13 +99,7 @@ pub fn run() -> EntryPoint {
 }
 ```
 
-`WindowConfig` 还控制系统装饰和窗口透明。这些选项只作用于桌面窗口，完整列表和默认值见 [API 参考](https://tessera-ui.github.io/tessera/tessera_ui/)。
-
-要让内容避开状态栏和屏幕键盘，请使用窗口边距：它会随这些区域的变化实时测量。用法见[布局基础](/zhHans/guide/layout)。
-
-## 应用标识
-
-应用的显示名称、反向域名形式的标识符和源图标写在包根目录的 `tessera-app.toml` 中：
+应用的显示名称、反向域名标识符（至少两段点分 ASCII 标识符）和源图标写在 `tessera-app.toml`：
 
 ```toml
 name = "Notes"
@@ -125,24 +107,14 @@ identifier = "dev.example.notes"
 icon = "icon.svg"
 ```
 
-生成的 `build.rs` 通过 `tessera_build::build()` 读取这个文件，生成的 `res::application()` 再把它变成带窗口标题、应用 ID 和桌面图标的 `TesseraConfig`。CLI 生成平台包和宿主文件时也读取同一份元数据。这些都发生在构建期，运行中的应用使用的是上次构建时的值；修改文件后请重新构建。
+源图标应为正方形 SVG（文字转为路径、外部资源内嵌）或至少 1024 × 1024 的正方形 PNG。
 
-标识符至少包含两个以点分隔的片段。每段以 ASCII 字母开头，只能包含 ASCII 字母和数字。省略这些字段时，名称默认使用 Cargo 包名，标识符也由包名推导。
+## 集成标题栏与窗口控制
 
-图标路径相对于包根目录，使用正方形的 SVG 或 PNG。SVG 中的文字要转为路径，外部资源要嵌入文件。这些标识会出现在安装包、应用 bundle 和启动器的哪些位置，见[打包发布](/zhHans/guide/distribution)。
+在桌面上可以让顶部应用栏兼作窗口标题栏：
 
-## 让应用栏成为标题栏
-
-在桌面上，可以让应用栏兼任窗口标题栏，工具栏和窗口装饰共用一行。这需要两处改动。先在窗口配置中启用。下面的辅助函数可以放进 `src/lib.rs`，在调用 `.config(...)` 之前把配置传给它：
-
-```rust
-fn with_app_titlebar(mut config: TesseraConfig) -> TesseraConfig {
-    config.window = config.window.with_app_titlebar();
-    config
-}
-```
-
-再用 `.window_chrome(true)` 标出充当标题栏的应用栏。例如，`src/app.rs` 可以改成：
+1. 在 `WindowConfig` 中开启：`config.window = config.window.with_app_titlebar();`
+2. 在应用栏组件上开启 `.window_chrome(true)`：
 
 ```rust
 use tessera_components::{
@@ -161,11 +133,9 @@ pub fn app() {
 }
 ```
 
-macOS 保留原生窗口按钮；其他桌面平台会关闭系统装饰，由应用自己绘制窗口按钮。两种情况下，应用栏都提供拖动区域，并在平台需要时提供最小化、最大化和关闭按钮。在移动端和 Web 上，`with_app_titlebar` 不起作用。
+macOS 会保留原生红绿灯按钮并把应用栏设为拖动区；Windows 和 Linux 则关闭系统边框，由应用栏自己绘制最小化/最大化/关闭按钮。移动端和 Web 上该配置自动忽略。
 
-## 用代码控制窗口
-
-如果你自己绘制窗口按钮，或者需要一个“退出”操作，可以使用 `tessera_platform::window` 提供的 `minimize`、`maximize`、`toggle_maximize` 和 `close`。先用 `cargo add tessera-platform` 添加依赖。这些函数都不接受参数，可以直接传给 `on_click`：
+如果需要自定义窗口控制按钮，添加 `tessera-platform`（`cargo add tessera-platform`），直接把 `tessera_platform::window` 里的函数传给 `on_click`：
 
 ```rust
 use tessera_components::{button::button, row::row, text::text};
@@ -182,14 +152,8 @@ fn window_buttons() {
 }
 ```
 
-这些调用依赖 `ComponentsPackage` 注册的桌面服务；服务不可用时，调用什么也不做。`close` 会请求宿主关闭应用，而不是立刻销毁它。
+## 运行时会话（`RuntimeSession`）
 
-## 运行时会话
+每个 `EntryPoint` 拥有独立的 `RuntimeSession`，用于隔离包、插件、模型和会话资源。消费入口前可通过 `entry.runtime_session()` 获取会话引用。
 
-`EntryPoint` 拥有一个 `RuntimeSession`。包、插件、状态所有者和会话资源都属于这个 UI 会话，每个入口各有一套。在入口被消耗之前，可以用 `entry.runtime_session()` 借用它的会话。
-
-直接操作会话主要用于测试和集成。它们可以用 `RuntimeSession::new()` 创建独立的会话，用 `run(...)` 在其中执行一段代码，或者调用 `enter()` 获取一个守卫，守卫销毁时恢复此前的会话。`resource::<T>()` 返回整个会话共享的资源，`local_resource::<T>()` 则把资源保留在 UI 线程上。
-
-克隆 `RuntimeSession` 会让会话保持存活。`downgrade()` 返回不持有会话的 `WeakRuntimeSession`，会话结束后，它的 `run(...)` 返回 `None`。`run` 只在所属的 UI 线程上执行。要把其他线程上后台工作的结果送回界面，请使用调度器，见[后台任务](/zhHans/guide/tasks)；外部资源也应随拥有它的对象一起释放。
-
-完整约定见 [tessera-ui API 参考](https://tessera-ui.github.io/tessera/tessera_ui/)。
+测试或宿主集成可以直接使用 `RuntimeSession::new()` 创建隔离会话，通过 `.run(...)` / `.enter()` 切换当前会话，用 `runtime_resource::<T>()` 存取会话级共享资源，或用 `.downgrade()` 获取不延长生命周期的 `WeakRuntimeSession`。

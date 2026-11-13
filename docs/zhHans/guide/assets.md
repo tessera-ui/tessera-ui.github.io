@@ -1,16 +1,15 @@
 ---
-title: 资源
-description: 随应用分发图片、图标、字体和数据文件，并通过生成的引用加载它们。
+title: 资源、图片与字体
+description: 通过 tessera-build 管理图片、图标、字体与数据文件，并在所有平台统一加载。
 ---
 
-# 资源
+# 资源、图片与字体
 
-随应用分发的图片、图标、字体和数据文件都放在资源目录中。构建时，Tessera 会为每个文件生成一个带类型的引用：你写的是 `res::images::LOGO_SVG`；文件不存在会直接编译失败；无论文件最终以什么方式分发，同一段代码在每个平台上都能找到它。
-
-要显示图片，把生成的引用传给 `.painter(...)`。以 `assets/images/logo.svg` 为例：
+把静态资源放进项目资源目录后，`tessera-build` 会在编译期把它们生成为 `crate::res` 下的强类型常量。路径写错会直接编译失败，同一个 `Asset` 常量在嵌入分发和平台按需分发两种模式下都能正常加载。
 
 ```rust
-use tessera_components::{image::image, modifier::ModifierExt as _};
+use tessera_components::image::image;
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
 use crate::res;
@@ -23,11 +22,9 @@ fn logo() {
 }
 ```
 
-读取和解码文件都由组件完成。引用描述的是字节从哪里来；组件会请求资源，并在资源可用后更新。组件的渲染管线来自在[应用入口](/zhHans/guide/app)注册的 `ComponentsPackage`。
+## 配置 `tessera-config.toml`
 
-## 配置资源目录
-
-资源配置写在包根目录的 `tessera-config.toml` 中：
+在包根目录的 `tessera-config.toml` 中开启资源收集：
 
 ```toml
 [assets]
@@ -38,47 +35,38 @@ embed = ["images/logo.svg"]
 exclude = ["runtime/**"]
 ```
 
-`dir` 相对于包根目录；只要存在 `[assets]` 节，它的默认值就是 `assets`。这个目录必须存在。只有存在 `[assets]` 节时，构建辅助函数才会收集资源目录。
+- `dir`：资源目录路径（存在 `[assets]` 节时默认为 `assets`）。
+- `embed`：即便使用 `--asset-backend platform` 构建，也始终直接内嵌进二进制的文件列表（相对 `dir`）。
+- `tree_shaking.exclude`：按 glob 保留资源，防止平台打包裁剪时把动态拼接引用的文件删掉。
 
-`embed` 列出相对于资源目录的精确路径。即使 CLI 为其他资源选择了平台分发，这些文件也始终嵌入在二进制中。构建辅助函数默认嵌入所有资源；平台分发则让 CLI 通过平台资源或 HTTP 单独提供文件。[打包发布](/zhHans/guide/distribution)时，交给 CLI 管理分发方式即可。
+目录名会转为小写模块名（Rust 2024 关键字自动加 `_` 后缀），带扩展名的文件名转为大写常量（标点替换为 `_`），例如 `assets/images/logo.svg` 生成 `res::images::LOGO_SVG`。
 
-`tree_shaking.exclude` 接受一组 glob 模式，匹配的文件即使在平台资源分析中找不到引用，也会**保留下来**。也就是说，它让文件免于被裁剪。代码动态选择的资源适合用它。如果在平台分发下也要嵌入这些文件，请同时把它们写进 `embed`。
+## 图片与矢量图标
 
-## 生成的引用
-
-生成项目的 `build.rs` 会调用 `tessera_build::build()`，把引用写入一个模块，再由 `src/res.rs` 以 `res` 的名字导出；这些文件见[项目结构](/zhHans/guide/project-structure)。增删资源后重新构建即可生效。
-
-目录名转为小写模块名，文件名连同扩展名转为大写常量名，标点替换为下划线。因此 `images/logo.svg` 对应 `res::images::LOGO_SVG`，`fonts/ExampleSans.ttf` 对应 `res::fonts::EXAMPLESANS_TTF`。规范化之后重名的文件会被拒绝。生成的文件交给构建维护；访问资源时始终使用生成的引用，它带有各平台的分发路径。
-
-## 图片与图标
-
-`Painter` 接受生成的资源、文件路径、编码后的字节、`ImageData` 和 `ImageVectorData`。`image().painter(...)` 和 `icon().painter(...)` 使用的是同一种表示。字符串来源在原生平台上表示文件路径，在 Web 上表示 URL；生成的资源则会为目标平台选择正确的分发方式。
-
-组件库自带的 Material 图标同样是生成的资源，分为 `filled`、`outlined`、`round`、`sharp` 和 `two_tone` 几种风格：
+`Painter` 支持生成的 `Asset` 常量、路径或 URL 字符串、编码字节、`ImageData` 与 `ImageVectorData`。`tessera_components::material_icons` 内置了 `filled`、`outlined`、`round`、`sharp`、`two_tone` 五套 Material 图标常量：
 
 ```rust
 use tessera_components::{icon::icon, material_icons::filled};
+use tessera_ui::tessera;
 
-#[tessera_ui::tessera]
+#[tessera]
 fn settings_symbol() {
     icon().painter(filled::SETTINGS_SVG);
 }
 ```
 
-图标这类使用主题的组件需要 `material_theme()` 祖先，见 [Material 3 主题](/zhHans/guide/theming)。
+- 图片和 SVG 均异步解码，请为它们设置明确尺寸以免加载完成时周围布局跳动。
+- SVG 渲染支持纯色填充与描边；导入前先把文字转为路径，并避免渐变、遮罩、滤镜或内嵌位图。
 
-编码后的来源是异步加载的。原生平台在工作线程上读取和解码；Web 异步获取内容，但目前解码仍在浏览器任务中进行，所以自定义的 Web 解码器要尽量轻量。图片和图标在加载期间或解码失败后不显示任何图像内容。给它指定尺寸，图片到达时周围布局就能保持稳定。
+## 注册字体
 
-SVG 以矢量几何绘制。路径支持纯色填充和描边。SVG 文本、内嵌图片、渐变、图案、虚线描边、裁剪路径、遮罩、滤镜、非默认的形状渲染模式以及非普通混合模式都会被拒绝。添加之前，先把文字转为路径，并简化不受支持的图形。
-
-载荷与显示选项见 [painter](https://tessera-ui.github.io/tessera/tessera_components/painter/index.html)、[image](https://tessera-ui.github.io/tessera/tessera_components/image/index.html) 和 [icon](https://tessera-ui.github.io/tessera/tessera_components/icon/index.html) 的 API 参考。
-
-## 字体
-
-字体通过 `tessera_components::fonts` 中的入口包注册。`Fonts` 接受一个静态的 `Font` 描述符切片。以 `assets/fonts/ExampleSans.ttf` 为例：
+通过 `tessera_components::fonts::{Font, Fonts}` 在 `EntryPoint` 注册随应用分发的字体：
 
 ```rust
-use tessera_components::{ComponentsPackage, fonts::{Font, Fonts}};
+use tessera_components::{
+    ComponentsPackage,
+    fonts::{Font, Fonts},
+};
 use tessera_ui::EntryPoint;
 
 const APP_FONTS: Fonts = Fonts(&[Font {
@@ -96,17 +84,13 @@ pub fn run() -> EntryPoint {
 }
 ```
 
-这里的 `app` 是应用已有的根组件。通过 `TextStyle::font_family` 选择注册的字体族，例如 `Some("Example Sans")`。`fallback` 是一组闭区间形式的 Unicode 范围，遇到这些字符时，即使没有选中这个字体族也会请求它，主字体缺少某种文字的字形时可以这样补上。`coverage` 把请求限制在字体支持的范围内，空切片表示允许所有范围。字体文件在文本首次需要时加载。
+通过 `TextStyle::font_family`（如 `Some("Example Sans")`）选用字体。`fallback` 指定当主字体缺字时也自动兜底的闭区间 Unicode 范围，`coverage` 限制按需加载该字体的字符范围。
 
-另一种入口包是 `FontStylesheet("https://example.com/fonts.css")`，同样用 `.package(...)` 注册。它从 CSS 的 `@font-face` 规则中发现字体，并根据 `unicode-range` 请求字体文件。应用需要离线可用时，优先使用随应用分发的字体资源。没有注册字体时，原生平台的文本使用系统字体；Web 构建自带一个启动字体，其他默认字体从 CDN 请求。
+如需加载远程 CSS 字体表，可注册 `FontStylesheet("https://example.com/fonts.css")`。原生平台未指定自定义字体时，`ComponentsPackage` 会在后台预扫描系统字体；Web 构建内嵌一份启动 Roboto 字体并按需拉取 Roboto / Noto Sans SC 子集。
 
-注册细节见 [fonts API](https://tessera-ui.github.io/tessera/tessera_components/fonts/index.html)，文本样式见[文本与文本输入](/zhHans/guide/text)。
+## 加载自定义数据文件
 
-## 加载数据文件
-
-其他文件，比如 JSON、文本或模型文件，用 `Resource::load(source, decode)` 加载。解码器的签名是 `fn(Arc<[u8]>) -> io::Result<T>`，负责把字节转换成你的类型，这个类型必须实现 `Clone + Send + Sync + 'static`。解码器是函数指针，不能是捕获环境的闭包。
-
-用 `remember` 保存资源，再在构建时读取 `Resource::get()`：
+对于 JSON、文本或自定义二进制文件，使用 `Resource::load(source, decode)`，其中 `decode` 是普通函数指针 `fn(Arc<[u8]>) -> io::Result<T>`（`T: Clone + Send + 'static`）：
 
 ```rust
 use std::{io, sync::Arc};
@@ -129,6 +113,4 @@ fn resource_notice() {
 }
 ```
 
-这个示例在原生平台读取文件，在 Web 上读取相对于当前页面的 URL。随应用分发的内容应传入生成的资源；例如 `assets/files/notice.txt` 对应 `res::files::NOTICE_TXT`。`LoadState` 区分加载中、成功和失败，你可以据此显示明确的加载和错误界面。
-
-来源和解码器相同的存活请求共享同一个结果。加载完成后，读取过该资源的构建和测量会失效并重新执行。需要结果期间，请一直持有这个句柄；如果来源变化时应创建新的资源，就按[生命周期与副作用](/zhHans/guide/lifecycle)中的说明，用键来记住它。
+随包分发的资源传入 `res::files::NOTICE_TXT`，外部路径或 URL 传字符串。同一来源和解码器的存活请求会自动共享结果，加载完成会自动触发读取者重建；若来源动态变化，配合 `remember_with_key` 使用。

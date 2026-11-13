@@ -1,19 +1,19 @@
 ---
 title: Navigation
-description: Move between screens with a destination stack, keep per-screen state, and handle Android back.
+description: Manage a screen stack with tessera-shard, keep route-scoped models alive across pushes, and handle system back.
 ---
 
 # Navigation
 
-Most apps have more than one screen, and users expect to go forward into detail and come back to where they were. `tessera-shard` gives a part of your UI a stack of destinations for this. A destination is a value that describes a screen and its arguments, and `shard_home` renders whichever destination is on top of the stack.
+`tessera-shard` manages a stack of route destinations and renders whichever destination sits on top inside `shard_home`.
 
-Add the crate to your app first:
+Add the crate to your project first:
 
 ```sh
 cargo add tessera-shard
 ```
 
-The root component below opens a detail screen and lets you go back. It plugs into the `EntryPoint` and `ComponentsPackage` registration your app already has:
+Here is a minimal two-screen flow using `#[shard]` and `use_router()`:
 
 ```rust
 use tessera_components::{
@@ -21,21 +21,27 @@ use tessera_components::{
     text::text,
     theme::{MaterialTheme, material_theme},
 };
-use tessera_shard::{RouterController, shard, shard_home};
-use tessera_ui::{State, tessera};
+use tessera_shard::{RouterController, shard, shard_home, use_router};
+use tessera_ui::tessera;
 
 #[shard]
-fn home(#[router] router: State<RouterController>) {
-    button().on_click(move || {
-        router.with_mut(|router| router.push(DetailDestination { id: 42 }));
-    }).child(|| { text("Open note"); });
+fn home() {
+    let router = use_router();
+    button()
+        .on_click(move || {
+            router.with_mut(|router| router.push(DetailDestination { id: 42 }));
+        })
+        .child(|| text("Open note"));
 }
 
 #[shard]
-fn detail(#[router] router: State<RouterController>, id: u64) {
-    button().on_click(move || {
-        router.with_mut(RouterController::pop);
-    }).child(move || { text(format!("Note {id}: go back")); });
+fn detail(id: u64) {
+    let router = use_router();
+    button()
+        .on_click(move || {
+            router.with_mut(RouterController::pop);
+        })
+        .child(move || text(format!("Note {id}: go back")));
 }
 
 #[tessera]
@@ -48,68 +54,29 @@ pub fn app() {
 }
 ```
 
-## Declare destinations
+## Defining destinations
 
-`#[shard]` turns a free function into a component and generates a destination type for it. The name follows the function: `detail` generates `DetailDestination`, and `note_editor` generates `NoteEditorDestination`. The destination type has the same visibility as the function.
+`#[shard]` turns a free function into a component and generates a `<FnName>Destination` struct (`detail` generates `DetailDestination`, `note_editor` generates `NoteEditorDestination`) with matching visibility.
 
-Each function parameter becomes a public field on the destination, with one exception: the parameter marked `#[router]`. That parameter receives the `State<RouterController>` supplied by `shard_home`, so you construct a destination from the other parameters only. At most one parameter can carry `#[router]`, and its type must be `State<RouterController>`.
+- Every parameter becomes a public field on the destination struct, **except** `Model<T>` parameters (which are injected per route).
+- Argument types must be owned and satisfy `Clone + PartialEq + 'static`. Pass lightweight IDs in destinations and look up full records inside the screen or its model.
+- `#[shard]` already establishes the component boundary; do not stack `#[tessera]` on the same function.
 
-Because a destination sits in the router's stack long after the code that created it has returned, its arguments must be owned values. Generated destinations implement `Clone` and `PartialEq` and have to meet the router's `Send + Sync + 'static` requirements. In practice, pass the ID of a record, and let the screen look the record up. An `Option<T>` parameter is still a field like any other, so write `None` when there is no value.
+Call `use_router()` during build inside any component rendered beneath `shard_home` to obtain `State<RouterController>`, then capture that handle in callbacks.
 
-`#[shard]` creates the component boundary itself, so it is the only attribute the function needs. To show a shard, navigate to its generated destination; `shard_home` calls the function when that destination is on top.
+## Managing the router controller
 
-## Own the router
-
-`shard_home().root(HomeDestination {})` creates and remembers an internal controller. The root you pass is the initial destination only; when the component rebuilds, the stack keeps the navigation that has happened since.
-
-When your app shell also needs to read or change the stack, remember a controller yourself and pass it in. This version replaces `app` from the first example:
-
-```rust
-use tessera_ui::remember;
-
-#[tessera]
-pub fn app() {
-    let router = remember(|| RouterController::with_root(HomeDestination {}));
-    material_theme()
-        .theme(|| MaterialTheme::default())
-        .child(move || {
-            shard_home().controller(router);
-        });
-}
-```
-
-An external controller brings its own initial stack, and `shard_home` uses that stack as it is, ignoring `.root(...)`. Keep that stack nonempty for as long as `shard_home` is mounted. If you supply neither a root nor an external controller, `shard_home` reports an error.
-
-Remembering the controller ties it to the lifetime of the shell component. Separate controllers keep separate stacks and separate shard state. [State](/guide/state) explains how remembered state is owned.
-
-## Change the stack
-
-Read the controller with `router.with(...)` and change it with `router.with_mut(...)`, usually from an input callback. These methods change the stack:
-
-| Method | Effect |
-| --- | --- |
-| `push(destination)` | Adds a new route instance above the current destination. |
-| `pop()` | Removes the current route and returns its destination, or `None` for an empty stack. |
-| `replace(destination)` | Removes the current route and pushes a new one; pushes if the stack is empty. |
-| `reset(destination)` | Removes all routes and installs a new root. |
-
-Pick the method by what the user should be able to return to. Use `push` when they should come back to the previous screen, `replace` when the current step should disappear from history, and `reset` when none of the old history should be reachable, such as after signing out.
-
-To inspect the stack, use `len`, `is_empty`, `last` and `current_is::<D>()`. Android's built-in back handling stops at the root. A direct `pop()` call removes whatever is on top, the root included, so a custom back button should pop only when `len() > 1`.
-
-## Switch between top-level destinations
-
-Apps with a few top-level sections usually show them in a navigation bar, rail or drawer, and each switch should start a fresh history. The shell below owns the controller, renders the current destination above a [navigation bar](https://tessera-ui.github.io/tessera/tessera_components/navigation_bar/index.html), and resets the stack when the user picks a section:
+`shard_home().root(HomeDestination {})` manages an internal `RouterController`. When the outer shell (such as a navigation bar or drawer) also needs to inspect or drive the stack, remember a `RouterController` yourself and pass `.controller(router)`:
 
 ```rust
 use tessera_components::{
     boxed::boxed,
     column::column,
-    modifier::ModifierExt as _,
     navigation_bar::{navigation_bar, navigation_bar_item},
     text::text,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_shard::{RouterController, shard, shard_home};
 use tessera_ui::{Modifier, remember, tessera};
 
@@ -154,50 +121,100 @@ pub fn app() {
 }
 ```
 
-The bar reads the router while it builds, so it rebuilds and moves its selection whenever the stack changes. Inside a section, screens can still `push` details as usual. Because `reset` releases the routes it removes, any route-owned state in the old section is gone when the user comes back; use controller-scoped state, described next, for sections that should keep theirs.
+Keep the stack non-empty while `shard_home` is mounted. Stack operations on `RouterController`:
 
-## Keep screen state
+| Method | Effect |
+| --- | --- |
+| `push(destination)` | Push a new route instance on top |
+| `pop()` | Pop the top route and close its models (`None` if empty) |
+| `replace(destination)` | Replace the current route and close its models |
+| `reset(destination)` | Clear all routes and install a new root |
+| `clear()` | Clear all routes |
 
-When the user opens another screen on top of an editor and comes back, they expect the editor to look the way they left it. `#[shard(state = T)]` gives a shard state for this. It lazily creates a `T` and makes it available inside the function as `state: ShardState<T>`. The macro provides `state`, so the parameter list holds only the destination's arguments. `T` must implement `Default + Send + Sync + 'static`.
+Inspect the stack with `len()`, `is_empty()`, `last()`, and `current_is::<D>()`. For custom back buttons, guard `pop()` with `len() > 1` so you do not pop the root screen.
 
-This additional destination keeps its counter while another route sits above it:
+## Route-scoped state with `Model<T>`
+
+Because covered routes are not mounted in the UI tree, component-local `remember` state resets when another route pushes on top. To keep screen state across navigation pushes, inject a `Model<T>`:
 
 ```rust
-#[derive(Default)]
-struct EditorState {
-    edits: usize,
+use tessera_components::{button::button, text::text};
+use tessera_shard::shard;
+use tessera_ui::{Model, ModelInit, State};
+
+struct EditorModel {
+    edits: State<usize>,
 }
 
-#[shard(state = EditorState)]
-fn editor() {
-    let edits = state.with(|value| value.edits);
-    button().on_click(move || {
-        state.with_mut(|value| value.edits += 1);
-    }).child(move || { text(format!("Edits: {edits}")); });
+impl ModelInit for EditorModel {
+    fn init() -> Self {
+        Self {
+            edits: State::new(0),
+        }
+    }
+}
+
+#[shard]
+fn editor(model: Model<EditorModel>) {
+    let edits = model.with(|model| model.edits);
+    button()
+        .on_click(move || edits.with_mut(|value| *value += 1))
+        .child(move || text(format!("Edits: {}", edits.get())));
 }
 ```
 
-`EditorDestination {}` has no arguments. Even so, pushing it twice creates two route instances, each with its own state, although the two destination values are equal.
+Each route instance owns its own model store:
 
-The `lifecycle` option decides who owns the state:
+- Models are created on first render and kept alive while covered by later routes.
+- All components below that route requesting `Model<EditorModel>` share the same instance.
+- Popping, replacing, or resetting the route closes its models and cancels any `Task` handles stored inside them.
+- Pushing the same destination twice creates two independent route instances with separate models.
 
-| Declaration | State owner |
-| --- | --- |
-| `#[shard(state = EditorState)]` | One route instance; equivalent to `lifecycle = shard`. |
-| `#[shard(state = EditorState, lifecycle = scope)]` | The router controller; shared by occurrences of this shard in that controller. |
+For state that must survive `reset` across top-level tabs, own a `Model` (or `State`) above `shard_home` in the app shell and pass handles into destinations.
 
-Route-owned state lives as long as its route stays in the stack and is released when the route is popped, replaced or cleared. Scope-owned state survives every stack change, including `reset`, and ends with its controller. `lifecycle` requires `state`; writing it alone is an error. The two choices correspond to `ShardStateLifeCycle::Shard` and `ShardStateLifeCycle::Scope`.
+## Route tasks
 
-Ordinary `remember` state belongs to the mounted component, so it ends when a screen leaves the visible tree. Keep data that has to outlive that in shard state or in another explicit owner.
+`launch` tasks inside a `#[shard]` function stop when another route covers the page and restart when returning. Check your route model before fetching again so completed loads do not repeat:
 
-`ShardState` supports `with`, `with_mut`, `get` and `set`. Copying the handle does not extend its owner's lifetime. If the route or controller may already be gone, use `try_with` and `try_with_mut`, which report that case as a result. To deliver results from background work into shard state, go through the owning UI session as described in [Background tasks](/guide/tasks).
+```rust
+use tessera_components::text::text;
+use tessera_shard::shard;
+use tessera_ui::{Dispatcher, Model, ModelInit, State, launch, on};
 
-## Android back navigation
+async fn load_note(id: u64) -> String {
+    format!("Note {id}")
+}
 
-`shard_home` hooks into Android system back through the generated host, so back navigation works as soon as `shard_home` is mounted. With more than one route, a predictive back swipe previews the previous destination while the current one stays in the stack. If the user cancels, the current screen comes back; if they commit, one route is popped. At the root, Android handles back as usual.
+struct NoteModel {
+    body: State<Option<String>>,
+}
 
-For a custom destination or an overlay, use `tessera_ui::system_back::system_back_handler`. Keep the handler mounted consistently, and enable it only while there is actually a back action to perform. Android sends back to the most recently mounted enabled handler, and a predictive gesture stays with the handler it started with.
+impl ModelInit for NoteModel {
+    fn init() -> Self {
+        Self {
+            body: State::new(None),
+        }
+    }
+}
 
-Treat `SystemBackEvent::Started`, `Progress` and `Cancelled` as changes to the preview, and change navigation only on `Committed`. That way a cancelled swipe keeps the current screen. A back button can send `Committed` directly, with no preview events before it. See [Platforms](/guide/platforms) for the Android host and [Gestures and interaction](/guide/interaction) for other app actions.
+#[shard]
+fn note(id: u64, model: Model<NoteModel>) {
+    let body = model.with(|model| model.body);
+    launch(id, async move {
+        if body.with(Option::is_some) {
+            return;
+        }
+        let loaded = on(Dispatcher::Io, load_note(id)).await;
+        body.set(Some(loaded));
+    });
+    text(body.get().unwrap_or_else(|| String::from("Loading...")));
+}
+```
 
-The [tessera-shard API reference](https://tessera-ui.github.io/tessera/tessera_shard/) documents the destination and state APIs in full.
+For work that should keep running while the page is covered (such as an upload), start it with `spawn` and store its `Task` inside the route's model.
+
+## System back navigation
+
+`shard_home` integrates with Android's predictive back gesture automatically: swiping previews the previous route, cancelling restores the current one, and committing pops the route (stopping at the root destination).
+
+For custom overlays or back interception, mount `tessera_ui::system_back::system_back_handler(enabled, on_back)`. Preview `SystemBackEvent::Started`, `Progress`, and `Cancelled` visually, and commit navigation changes only on `SystemBackEvent::Committed`.

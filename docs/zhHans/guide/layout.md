@@ -1,23 +1,27 @@
 ---
 title: 布局基础
-description: 用行、列、盒子和流式容器排列组件，并让界面避开系统区域。
+description: 用行、列、盒子和流式容器编排界面，理解约束与单位，并适配系统安全区域。
 ---
 
 # 布局基础
 
-界面是把组件嵌套进几种标准容器搭出来的。每种容器只负责一种排列方式：水平、垂直、叠放或换行，组合起来就能得到想要的结构。单个内容要占多大空间，再交给修饰符调整。
+Tessera 里的界面是用几种基础容器嵌套拼出来的。每种容器只管一种排布规律——水平、垂直、叠放或自动换行；单个元素的留白和大小再交给修饰符微调。
 
-本页示例都需要放在 `material_theme()` 下，应用入口还要注册 `ComponentsPackage`。参见 [Material 3 主题](/zhHans/guide/theming)和[应用入口与窗口](/zhHans/guide/app)。
+本页代码默认跑在 `material_theme()` 之下，并在入口注册了 `ComponentsPackage`。详见[Material 3 主题与视觉样式](/zhHans/guide/theming)与[应用入口、窗口与会话](/zhHans/guide/app)。
 
 ## 标准容器
 
-`row()` 把子组件水平依次排开，`column()` 垂直排开，`boxed()` 则把它们叠在一起。比如一条消息预览，就是一个行里放头像和一个两行文字的列：
+`row()` 把子组件从左往右排，`column()` 从上往下排，`boxed()` 把它们叠在一起。比如一条带头像和两行文字的消息预览，就是行套列：
 
 ```rust
 use tessera_components::{
-    alignment::CrossAxisAlignment, column::column, modifier::ModifierExt as _,
-    row::row, spacer::spacer, text::text,
+    alignment::CrossAxisAlignment,
+    column::column,
+    row::row,
+    spacer::spacer,
+    text::text,
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
@@ -35,15 +39,27 @@ fn message_preview() {
 }
 ```
 
-容器通过 `children` 闭包接收子组件，所以放什么、放几个，可以直接用 `if`、`for` 这些普通的 Rust 控制流决定。固定 `width` 的空白组件在头像和文字之间留出一段恒定的间距。
+`children` 接收普通构建闭包，所以条件显示和循环直接写 Rust 的 `if`、`match`、`for` 就行。固定宽高的 `spacer()` 用来在相邻元素之间拉出均匀间距。
 
-## 对齐与排列
+## 对齐与权重分配
 
-行和列在两个方向上都默认从起点开始排列。`main_axis_alignment` 控制子组件在排列方向上的位置，可选 `Center`、`End`、`SpaceBetween`、`SpaceAround`、`SpaceEvenly` 等；`cross_axis_alignment` 控制垂直于排列方向的位置，其中 `CrossAxisAlignment::Stretch` 会把子组件拉伸到交叉轴的可用尺寸。
+行和列默认都在两个方向上靠起点对齐：
 
-想让一部分子组件靠到最远端、其余留在起点，可以给空白组件设置权重。下面这个行通过修饰符占满可用宽度，带权重的空白组件吃掉两段文字之外的全部剩余空间：
+- `main_axis_alignment(...)` 控制主轴（排列方向）上的分布，可选 `Start`、`Center`、`End`、`SpaceBetween`、`SpaceAround`、`SpaceEvenly`。
+- `cross_axis_alignment(...)` 控制交叉轴上的对齐，可选 `Start`、`Center`、`End`、`Stretch`。
+
+想把行或列里的部分元素推到最远端，插入一个带权重的 `spacer()`（或者直接给子组件挂 `.weight(1.0)`）：
 
 ```rust
+use tessera_components::{
+    alignment::CrossAxisAlignment,
+    row::row,
+    spacer::spacer,
+    text::text,
+};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
+
 #[tessera]
 fn folder_row() {
     row()
@@ -57,14 +73,16 @@ fn folder_row() {
 }
 ```
 
-`weight(1.0)` 是交给行列布局读取的父数据。行列会先测量没有权重的子组件，再把主轴上剩余的有限空间按正权重分给其他子组件。如果主轴没有有限最大值，就没有“剩余空间”可分，布局会直接测量子组件，不按权重分配。只有行和列会读取权重，所以它只对行列的直接子组件生效。
+`weight` 是写给父容器看的父数据。`row` 和 `column` 会先测量没有权重的子组件，再把主轴上剩下的有限空间按权重比例分给带权重的子组件。如果主轴没有上限（例如放在垂直滚动容器里），就没有“剩余空间”可分，权重不会拉伸子组件。目前只有 `row` 和 `column` 读取 `.weight(...)`。
 
-## 在盒子里叠放内容
+## 在 `boxed` 里叠放元素
 
-`boxed().alignment(...)` 设置子组件的默认位置，子组件可以用自己的 `align(...)` 修饰符覆盖它。在预览图角落放一个标记，就是这样写的：
+`boxed().alignment(...)` 设置所有子组件的默认叠放位置，个别子组件可以用 `.align(...)` 单独覆盖：
 
 ```rust
-use tessera_components::{alignment::Alignment, boxed::boxed};
+use tessera_components::{alignment::Alignment, boxed::boxed, text::text};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
 fn layered_label() {
@@ -78,12 +96,14 @@ fn layered_label() {
 }
 ```
 
-## 用流式布局自动换行
+## 用流式容器自动换行
 
-希望一行排满后自动换到下一行，就用 `flow_row()`；垂直方向对应 `flow_column()`。一组标签是最典型的场景：
+一排标签放不下时希望自动折行，用 `flow_row()`；垂直折列用 `flow_column()`：
 
 ```rust
-use tessera_components::flow_row::flow_row;
+use tessera_components::{flow_row::flow_row, text::text};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
 fn tags() {
@@ -99,21 +119,16 @@ fn tags() {
 }
 ```
 
-`item_spacing` 是同一行内条目之间的间距，`line_spacing` 是行与行之间的间距。流式容器会构建所有子组件，适合数量不多的内容；内容很多时，使用[列表与滚动](/zhHans/guide/lists)里按视口构建的惰性列表。
-
-## 间距、尺寸与偏移
-
-`padding_all` 给四条边设置相同的内边距，`padding_symmetric(horizontal, vertical)` 分别设置水平和垂直方向。要单独设置每条边，使用 `padding(Padding::new(left, top, right, bottom))`，其中 `Padding` 从 `tessera_components::modifier` 导入。行列子组件之间需要固定间距时，插入一个带 `width` 或 `height` 的 `spacer()`；带权重的空白组件占据的则是剩余空间。
-
-`width`、`height` 和 `size` 在父布局允许的范围内请求固定尺寸，`fill_max_width`、`fill_max_height` 和 `fill_max_size` 取父布局给出的有限最大值。修饰符从外向内生效，所以先写 `padding` 再写 `size`，和反过来写，结果并不相同。顺序规则和完整的尺寸修饰符见[修饰符](/zhHans/guide/modifiers)。
-
-`offset(x, y)` 只移动内容的位置，父布局为它预留的尺寸保持原样，相邻组件也留在原处。如果周围的布局需要为此让出空间，使用内边距或空白组件。
+`item_spacing` 管同一行内元素之间的空隙，`line_spacing` 管行与行之间的空隙。流式容器会一次性构建所有子组件，条目数量很大时请改用[列表、网格与滚动](/zhHans/guide/lists)里的惰性容器。
 
 ## 单位与约束
 
-内边距、控件尺寸、文字大小这类由你自己设定的尺寸，用 `Dp` 表示。`Dp(16.0)` 与屏幕密度无关，Tessera 会按当前 UI 会话的密度把它换算成物理像素。布局本身以物理像素计算：`Px` 是整数像素单位，用于约束、测量尺寸和读回数据；`PxPosition` 则允许带小数的像素位置。
+Tessera 把界面设计单位和渲染物理像素分得很清楚：
 
-布局时，父布局会给子组件一个 `Constraint`，其中包含一个宽度区间和一个高度区间。子组件在区间内选定自己的尺寸，再由父布局决定把它放在哪里。每个 `AxisConstraint` 都有一个 `Px` 最小值和一个可选的最大值。没有最大值表示该方向无上界，并不等于“和窗口一样大”。最小值与最大值相等时，尺寸就是固定的。
+- **`Dp`（密度无关像素）**：写组件尺寸、内边距、间距和字号时统一用 `Dp`。`Dp(16.0)` 会按当前窗口缩放系数自动换算。
+- **`Px`（物理像素）**：测量和读回时用的整数像素；`PxPosition` 使用 `f32` 物理坐标。
+
+测量阶段，父容器会给每个子组件传一份 `Constraint`，包含宽高两个方向上的 `AxisConstraint` 区间（下限 `min: Px` 和可选上限 `max: Option<Px>`）：
 
 ```rust
 use tessera_ui::{AxisConstraint, Constraint, Px};
@@ -125,15 +140,15 @@ let available = Constraint::new(
 let exact = Constraint::exact(Px(320), Px(240));
 ```
 
-这些值是物理测量结果。大多数 UI 代码用修饰符描述尺寸，约束由父布局生成。不过“无上界”在实际中经常遇到：滚动容器里，滚动方向没有最大值，在那里用 `fill_max_height` 就无处可填。需要直接处理约束的测量代码，见[自定义布局](/zhHans/guide/custom-layout)。
+当 `max` 为 `None` 时，表示该方向**无上界**——比如纵向滚动容器的垂直方向。这也是为什么在纵向滚动里写 `fill_max_height()` 没法撑满窗口高度，因为父级根本没有给有限上限。当 `min == max` 时，该方向尺寸就固定死了。
 
-## 让内容避开系统区域
+## 避开系统栏与安全区域
 
-在手机上或全面屏窗口里，状态栏、屏幕缺口和屏幕键盘都可能盖住窗口的一部分。占满整个窗口的界面可以交给 `scaffold` 处理：它让各个插槽避开这些区域，同时仍把背景绘制到它们下方。
+在手机或无边框全屏窗口里，状态栏、刘海和软键盘会遮挡窗口边缘。全屏页面最省事的做法是交给 `scaffold`：
 
 ```rust
-use tessera_components::scaffold::scaffold;
-use tessera_ui::WindowInsets;
+use tessera_components::{scaffold::scaffold, text::text};
+use tessera_ui::{WindowInsets, tessera};
 
 #[tessera]
 fn screen() {
@@ -143,14 +158,12 @@ fn screen() {
 }
 ```
 
-`WindowInsets::SystemBars` 包括系统栏和屏幕缺口，`Ime` 表示停靠式屏幕键盘遮挡的区域。`SafeDrawing` 在每条边上取二者中较大的值，而不是相加。
+`WindowInsets::SystemBars` 包含系统栏和屏幕缺口，`WindowInsets::Ime` 表示软键盘遮挡区域，`WindowInsets::SafeDrawing` 则会在四条边上分别取两者较大值。
 
-如果你自己绘制界面边界，可以使用 `Modifier::new().window_insets_padding(WindowInsets::SafeDrawing)`。它只为祖先尚未消费的那部分安全区域添加内边距，然后把这部分空间标记为已消费，嵌套的界面对每段安全区域只留白一次。`consume_window_insets` 只做标记、不加内边距，仅在父布局已经用其他方式预留了这部分空间时使用。
-
-`window_insets_bottom_height`、`window_insets_top_height` 等边缘辅助方法，可以让空白组件取得对应边上剩余的安全区域高度。普通的内容内边距和安全区域内边距请分开设置。应用栏和浮动内容插槽见 [`scaffold` 参考](https://tessera-ui.github.io/tessera/tessera_components/scaffold/index.html)。
+如果不用 `scaffold` 而自己搭全屏外壳，可以给根容器加上 `Modifier::new().window_insets_padding(WindowInsets::SafeDrawing)`。它只会补充祖先尚未消费的那部分边距，并把已加的边标记为已消费，嵌套子页面不会重复留白。如果父容器已经通过别的方式留出了位置，用 `consume_window_insets` 只做标记不加内边距；想直接按某条边的剩余安全高度撑开 `spacer`，可以用 `window_insets_bottom_height` 等辅助方法。
 
 ## 下一步
 
-- 内容超出屏幕时，看[列表与滚动](/zhHans/guide/lists)。
-- 尺寸、顺序和视觉修饰符，看[修饰符](/zhHans/guide/modifiers)。
-- 现有容器都不合适时，看[自定义布局](/zhHans/guide/custom-layout)。
+- 在[修饰符](/zhHans/guide/modifiers)掌握修饰符的来源和顺序规则。
+- 在[列表、网格与滚动](/zhHans/guide/lists)解决内容超出屏幕与长列表性能问题。
+- 需要自己写测量逻辑或缩放子树时，查阅[自定义布局与局部坐标](/zhHans/guide/custom-layout)。

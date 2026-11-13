@@ -1,19 +1,22 @@
 ---
 title: Material 3 theming
-description: Give your app one Material 3 color scheme, type scale and shape set, and use them in your own components.
+description: Provide Material 3 colors, typography, and shapes across your app, support light/dark mode, and style glass surfaces.
 ---
 
 # Material 3 theming
 
-The standard components follow Material 3 Expressive, and they all take their colors, type and shapes from one theme. When you set that theme once at the root and use its roles in your own components too, your custom UI matches the built-in controls and switches between light and dark along with them.
+Standard controls in `tessera-components` follow Material 3 Expressive: colors, typography, shapes, and state-layer alphas all read from one shared `MaterialTheme`. Setting the theme at your app root and reusing its roles in your own components keeps custom UI visually consistent across light and dark mode.
 
-`material_theme()` provides the theme to a subtree. Put it around the application UI:
+Place `material_theme()` at the root of your UI tree:
 
 ```rust
 use tessera_components::{
-    column::column, modifier::ModifierExt as _, text::text,
+    column::column,
+    modifier::ModifierExt as _,
+    text::text,
     theme::{MaterialTheme, material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Color, Dp, Modifier, tessera, use_context};
 
 #[tessera]
@@ -24,31 +27,33 @@ fn app() {
 }
 ```
 
-This is an application root component; a complete app also needs an entry point. Register `ComponentsPackage` with the application's `EntryPoint` to install the component rendering and platform dependencies; see [Entry point and windows](/guide/app). The `themed_panel` it renders appears under [Use color roles](#use-color-roles).
+Remember to register `ComponentsPackage` on your `EntryPoint` as well: the package installs rendering pipelines and platform services, while `material_theme()` supplies design tokens through context.
 
-## Choose a color scheme
+## Choosing a color scheme
 
-`MaterialTheme` holds three things: `color_scheme`, `typography` and `shapes`. Most apps start from a seed color. `MaterialTheme::from_seed(seed, is_dark)` derives a full light or dark scheme from a linear sRGB `Color` and keeps the default typography and shapes; pass `true` as the second argument for the dark scheme.
+`MaterialTheme` bundles three pieces: `color_scheme`, `typography`, and `shapes`.
 
-If you need more control, build a `MaterialColorScheme` yourself (`MaterialColorScheme::light_from_seed` and `dark_from_seed` are starting points) and pass it to `MaterialTheme::from_color_scheme(scheme)`. Because `MaterialTheme` is a plain struct, you can also replace its `typography` or `shapes` fields directly.
+The quickest way to build a palette is `MaterialTheme::from_seed(seed, is_dark)`, which derives a complete light or dark `MaterialColorScheme` from a linear sRGB `Color` while keeping default typography and shapes. When `.theme(...)` is omitted, `material_theme()` uses `MaterialTheme::default()` (the baseline Material seed `#6750A4` in light mode).
 
-Without a `theme` setter, `material_theme()` provides `MaterialTheme::default()`: a light scheme from the Material baseline seed `#6750A4`.
+For custom schemes or type overrides, construct a `MaterialColorScheme` directly (starting from `MaterialColorScheme::light_from_seed` or `dark_from_seed`), build a `MaterialTheme::from_color_scheme(scheme)`, and adjust `.typography` or `.shapes` as needed.
 
-## Support a dark theme
+## Light and dark mode
 
-The theme does not follow the operating system's dark mode on its own. Your app decides which appearance to use, and the theme producer reads that decision:
+Tessera does not switch themes behind your back based on OS settings. Store the appearance choice in state and read that state *inside* `.theme(...)`:
 
 ```rust
-use tessera_components::button::button;
-use tessera_ui::remember;
+use tessera_components::{
+    button::button,
+    text::text,
+    theme::{MaterialTheme, material_theme},
+};
+use tessera_ui::{Color, remember, tessera};
 
 #[tessera]
 fn appearance_picker() {
     let dark = remember(|| false);
     material_theme()
-        .theme(move || {
-            MaterialTheme::from_seed(Color::from_rgb(0.4, 0.3, 0.6), dark.get())
-        })
+        .theme(move || MaterialTheme::from_seed(Color::from_rgb(0.4, 0.3, 0.6), dark.get()))
         .child(move || {
             button()
                 .on_click(move || dark.with_mut(|value| *value = !*value))
@@ -57,13 +62,11 @@ fn appearance_picker() {
 }
 ```
 
-The producer runs during rebuild and reads current state, and descendants that consume the theme update when its value changes. Keep the state read inside the producer, as above, so the theme keeps reacting; a value read once outside the producer is a snapshot that stays fixed. [State](/guide/state) explains why.
+Because `.theme(...)` runs during `material_theme`'s build, reading `dark.get()` inside that closure ensures `material_theme` re-runs and publishes the updated `MaterialTheme` to every reading descendant. Nested `material_theme()` calls override only their own subtree—useful for previewing another palette side by side.
 
-A nested `material_theme()` overrides the theme for its descendants only, which is useful for something like a preview in a different scheme. Its siblings keep the outer theme, and the nested theme paints no background of its own.
+## Using color roles and `ContentColor`
 
-## Use color roles
-
-Inside a component, read the nearest theme with `use_context::<MaterialTheme>()`. This is the `themed_panel` from the first example:
+Read the active theme in any descendant with `use_context::<MaterialTheme>()`:
 
 ```rust
 #[tessera]
@@ -87,22 +90,28 @@ fn themed_panel() {
 }
 ```
 
-Color roles come in pairs: a fill and the content color designed to sit on it. Using the pair is what keeps text readable in both light and dark schemes.
+Material colors come in surface/content pairs so contrast holds in both light and dark modes:
 
-| Purpose | Fill | Content |
+| Role | Fill | Content |
 | --- | --- | --- |
-| Prominent action | `primary` | `on_primary` |
-| Accented container | `primary_container` | `on_primary_container` |
-| General surface | `surface` or `surface_container` | `on_surface` |
+| Primary action | `primary` | `on_primary` |
+| Emphasized container | `primary_container` | `on_primary_container` |
+| Standard surface | `surface` / `surface_container` | `on_surface` |
 | Error state | `error_container` | `on_error_container` |
 | Inverse surface | `inverse_surface` | `inverse_on_surface` |
 
-Use `outline` or `outline_variant` for strokes, and `on_surface_variant` for less prominent content on a surface. `content_color_for(background, &scheme)` returns the matching content color for a recognized scheme fill, or `None` for an unrelated color; it is not a general contrast calculator.
+Use `outline` / `outline_variant` for borders and `on_surface_variant` for secondary labels.
 
-Text and icons inherit `ContentColor` from their parent, and bare text falls back to `on_surface` when nothing else is set. A `background` modifier does not provide a content color, though. A `surface()` does: for a fill that belongs to the scheme it passes the matching content role down to its children, so the text here is drawn in `on_primary_container` automatically:
+`text` and `icon` inherit `ContentColor` from context (falling back to `on_surface`). Note the difference between a plain background modifier and `surface()`: `Modifier::background` only paints pixels, whereas `surface()` looks up `content_color_for(fill, &scheme)` and automatically provides the matching `ContentColor` to its children:
 
 ```rust
-use tessera_components::surface::{SurfaceStyle, surface};
+use tessera_components::{
+    surface::{SurfaceStyle, surface},
+    text::text,
+    theme::MaterialTheme,
+};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera, use_context};
 
 #[tessera]
 fn backup_banner() {
@@ -120,49 +129,49 @@ fn backup_banner() {
 }
 ```
 
-For a fill the scheme does not recognize, `surface` keeps the inherited content color; set `content_color` on it explicitly in that case.
+If you pass a custom non-scheme color to `surface()`, pass `.content_color(...)` explicitly as well.
 
-## Typography
+## Typography and shared shapes
 
-The theme's `typography` is a `MaterialTypography` scale with display, headline, title, body and label roles in three sizes. Components pick their own roles from it, so changing a role in the theme changes every component that uses it. [Text and text input](/guide/text) shows how to apply roles and override a single style.
+`theme.typography` provides the five standard Material roles (`display`, `headline`, `title`, `body`, `label`) in `large`, `medium`, and `small` variants, plus `.emphasized()` for emphasized variants. See [Text and text input](/guide/text) for applying and customizing `TextStyle`.
 
-## Shapes
-
-`MaterialShapes` provides shared corner roles: `extra_small`, `small`, `medium`, `large`, `large_increased` and `extra_large`. Reuse one `Shape` for a surface's fill, outline, shadow and clipping so their edges agree. A shaped background only draws that shape; to keep overflowing children inside it, add `clip_shape`.
-
-The following fragment runs inside a component after reading its `theme` context:
+`theme.shapes` provides rounded corner tokens (`extra_small`, `small`, `medium`, `large`, `large_increased`, `extra_large`). Whenever a container combines shadow, fill, border, and clipping, share the same `Shape` across all four so corners line up cleanly:
 
 ```rust
-use tessera_components::modifier::ShadowArgs;
+use tessera_components::{modifier::{ModifierExt as _, ShadowArgs}, theme::MaterialTheme};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier};
 
-let shape = theme.shapes.large;
-let panel = Modifier::new()
-    .shadow(
-        &theme.color_scheme,
-        &ShadowArgs { elevation: Dp(3.0), shape, ..Default::default() },
-    )
-    .background_with_shape(theme.color_scheme.surface_container, shape)
-    .border_with_shape(Dp(1.0), theme.color_scheme.outline_variant, shape)
-    .clip_shape(shape)
-    .padding_all(Dp(16.0));
+fn panel_modifier(theme: &MaterialTheme) -> Modifier {
+    let shape = theme.shapes.large;
+    Modifier::new()
+        .shadow(
+            &theme.color_scheme,
+            &ShadowArgs {
+                elevation: Dp(3.0),
+                shape,
+                ..Default::default()
+            },
+        )
+        .background_with_shape(theme.color_scheme.surface_container, shape)
+        .border_with_shape(Dp(1.0), theme.color_scheme.outline_variant, shape)
+        .clip_shape(shape)
+        .padding_all(Dp(16.0))
+}
 ```
 
-Pass `panel` to a container's `modifier` setter. The explicit `clip_shape` keeps descendants inside the shared shape, and placing the shadow outside that clip lets it extend beyond the surface. Clipping changes drawing and hit-test boundaries; measurement stays the same. Why the order of these calls matters is covered in [Modifiers](/guide/modifiers).
+Notice `shadow(...)` stays *outside* `clip_shape(shape)` so the shadow can spread beyond the rounded edge while children inside are clipped to it.
 
-## Material 3 Expressive components
+## Glass surfaces (`fluid_glass`)
 
-The component library covers actions, selection, editing, navigation and feedback, plus layout containers and controllers for composing them into screens. All of them read the shared theme for color, typography, shape and interaction defaults.
-
-Start from a standard component when its behavior matches the task, then override what it exposes. As a rule of thumb, use a theme override for a subtree-wide policy, a component setter for one component, and a modifier for node-local layout or drawing. For selected, disabled or focus behavior, use the control's own states; a background modifier only paints.
-
-The [component API reference](https://tessera-ui.github.io/tessera/tessera_components/) documents each component's parameters and defaults, and the [running gallery](https://tessera-ui.github.io/tessera/example/) shows how they look and behave. This guide describes patterns, and the reference covers each control in detail.
-
-## Glass materials
-
-`fluid_glass()` samples the scene behind it and draws a tinted, refractive surface. It is a backdrop material whose look depends on what lies behind it, so place it over content that gives it something to show and check foreground contrast over both light and dark regions.
+`fluid_glass()` samples the scene rendered behind it to draw a tinted, blurred, refractive surface:
 
 ```rust
-use tessera_components::fluid_glass::{GlassMaterial, fluid_glass};
+use tessera_components::{
+    fluid_glass::{GlassMaterial, fluid_glass},
+    text::text,
+};
+use tessera_ui::{Dp, tessera};
 
 #[tessera]
 fn glass_label() {
@@ -173,6 +182,12 @@ fn glass_label() {
 }
 ```
 
-Like the other components, it belongs below the application's theme. `GlassMaterial::Regular` gives a frosted treatment; `Clear` preserves more of the backdrop's color and contrast; `Custom` supplies a refractive lens without default blur or tone adjustment. `appearance` can override the theme's light or dark treatment, and `blur_radius` overrides the material's blur, where zero disables backdrop blur.
+- `GlassMaterial::Regular`: frosted look with stronger foreground separation.
+- `GlassMaterial::Clear`: more transparent, keeping backdrop color and contrast.
+- `GlassMaterial::Custom`: refractive lens without default blur or tint adjustments.
 
-The [glass material reference](https://tessera-ui.github.io/tessera/tessera_components/fluid_glass/index.html) covers shape, tint, optics and input configuration, and the [gallery](https://tessera-ui.github.io/tessera/example/) includes glass examples. Custom scene-sampling effects must declare their sampling bounds; that contract is covered in [Drawing and shaders](/guide/drawing).
+You can override `appearance` (`Light` / `Dark`) or `blur_radius` (`Dp(0.0)` disables backdrop blur). Because backdrop sampling copies behind-the-glass pixels, place `fluid_glass` where something visual sits behind it and check text contrast across light and dark backdrops.
+
+## Next steps
+
+See [Lists, grids, and scrolling](/guide/lists) for displaying large collections, or browse the [component API reference](https://tessera-ui.github.io/tessera/tessera_components/) and [live WebGPU gallery](https://tessera-ui.github.io/tessera/example/) for every control in the library.

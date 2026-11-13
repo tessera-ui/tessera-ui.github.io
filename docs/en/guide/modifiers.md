@@ -1,16 +1,17 @@
 ---
 title: Modifiers
-description: Decorate a component with size, spacing, drawing, interaction and semantics by chaining modifiers.
+description: Chain layout, drawing, interaction, focus, and semantics modifiers in the right order.
 ---
 
 # Modifiers
 
-A modifier changes how one piece of UI is laid out, drawn, or handled, and it works the same on any component that takes one. You start a chain with `Modifier::new()`, add calls in the order you want them to apply, and pass the result to the component's `modifier` setter.
+A `Modifier` decorates or changes how a UI node behaves—its size, padding, background, clipping, click handling, focus, or accessibility metadata—without inventing wrapper components for every combination. Start a chain with `Modifier::new()`, append methods in order, and pass the result to `.modifier(...)`.
 
-This badge gets its background, rounded shape and inner spacing from one chain:
+Here is a rounded status badge styled with one modifier chain:
 
 ```rust
 use tessera_components::{modifier::ModifierExt as _, text::text, theme::MaterialTheme};
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 
 #[tessera]
@@ -28,13 +29,24 @@ fn status_badge() {
 }
 ```
 
-`Modifier` itself comes from `tessera_ui`. Most of the methods you call on it, such as `padding_all`, `background` and `clickable`, are extension methods from `tessera_components::modifier::ModifierExt`, so import that trait with `as _`. Focus modifiers come from `tessera_ui::FocusModifierExt` instead. Examples that read `MaterialTheme` need a `material_theme()` ancestor; see [Material 3 theming](/guide/theming).
+## Where modifier methods come from
+
+`Modifier` itself lives in `tessera_ui` (along with geometry observers such as `on_layout_size_changed`), while chainable extension methods are split into focused traits by responsibility:
+
+| Trait | Methods it provides |
+| --- | --- |
+| `tessera_foundation::modifier::ModifierExt` | Sizing (`size`, `width`, `height`, `fill_max_*`, `required_*`, `size_in`, `constrain`), `padding*`, `offset`, `alpha`, `clip_to_bounds`, `clip_shape`, `weight`, `align`, `window_insets_*`, `draggable`, `block_touch_propagation`, `window_drag_region`, `semantics`, `clear_and_set_semantics` |
+| `tessera_components::modifier::ModifierExt` | Material visual and interactive modifiers: `background*`, `border*`, `shadow`, `vertical_scroll`, `horizontal_scroll`, `scroll`, `clickable`, `toggleable`, `selectable` |
+| `tessera_ui::modifier::FocusModifierExt` | Focus registration and geometry observers: `focusable`, `focus_requester`, `focus_properties`, `preferred_tab_stop`, `focus_group`, `focus_scope`, `focus_restorer`, `focus_traversal_policy`, `on_focus_changed`, `on_globally_positioned*`, `on_layout_coordinates`, `on_local_to_window` |
+| `tessera_ui::modifier::CursorModifierExt` | `hover_cursor_icon` |
+
+Import only the traits you call using `as _` (for example, `use tessera_foundation::modifier::ModifierExt as _;`). `cargo tessera check` warns (`tessera::named_modifier_ext_import`) if a private import binds a trait name that is never mentioned by name.
 
 ## Order matters
 
-Each call wraps everything after it. The chain applies from the outside in: the first modifier sees the constraints from the parent, and the last one sits closest to the content. Swapping two calls can change the result.
+Each call in a `Modifier` chain wraps everything after it, working **outside in**: the first modifier receives the parent's incoming constraints, and the last modifier sits closest to the component's content. Swapping two calls changes what gets measured, painted, or clicked.
 
-Here the same padding and size produce two different boxes:
+Compare these two size-and-padding chains:
 
 ```rust
 let outside = Modifier::new()
@@ -46,9 +58,9 @@ let inside = Modifier::new()
     .padding_all(Dp(12.0));
 ```
 
-With room to spare, `outside` puts 12 dp of padding around a 120 × 48 content area, so the whole thing is 144 × 72. `inside` fixes the total at 120 × 48 and then takes the padding out of it, leaving 96 × 24 for the content. Either way the parent's constraints still bound ordinary sizing requests. Repeated sizing modifiers follow the same outside-in order: an outer exact size bounds every request inside it, so an inner request may have no effect.
+When space allows, `outside` pads 12 dp around a 120 × 48 dp inner box (total size 144 × 72 dp). `inside` fixes the outer box at 120 × 48 dp first and subtracts 12 dp on each side, leaving 96 × 24 dp for the inner content. Chained size constraints follow the same rule: an outer exact size limits any inner size requests.
 
-Drawing follows the same rule, because a visual modifier uses the bounds it has at its position in the chain:
+Visual and hit-testing modifiers also use the bounds at their position in the chain:
 
 ```rust
 let padded_surface = Modifier::new()
@@ -60,79 +72,41 @@ let content_surface = Modifier::new()
     .background(Color::WHITE);
 ```
 
-`padded_surface` paints the padding too. `content_surface` leaves the outer 12 dp unpainted and fills only the content behind it. Borders, clips and click targets work the same way, which is why the same few modifiers can express quite different designs.
+`padded_surface` paints behind the padding too; `content_surface` leaves the outer 12 dp transparent and fills only behind the inner content. Placing `clickable` before `padding_all` makes the padding area clickable as well.
 
-## Size and spacing
+## Common modifier groups
 
-Write sizes you choose yourself in `Dp`. The common sizing modifiers are:
+### Sizing, padding, and offset
 
-- `width`, `height` and `size` ask for an exact size within the incoming bounds. `size_in` sets optional minimums and maximums, and `constrain` takes explicit `AxisConstraint` intervals.
-- `fill_max_width`, `fill_max_height` and `fill_max_size` take the parent's finite maximum. On an unbounded axis, such as the main axis of a scrolling column, there is no maximum to take.
-- `required_width`, `required_height` and `required_size` ignore the incoming constraints. Use them when you want the content to be able to overflow its parent.
-- `padding_all`, `padding_symmetric` and `padding(Padding::new(left, top, right, bottom))` add space inside the modifier's bounds.
-- `offset(x, y)` moves content while the space its parent reserved stays the same, so siblings stay where they are.
+- `width`, `height`, `size`: request an exact size clamped to incoming parent constraints.
+- `size_in(min_w, max_w, min_h, max_h)` / `constrain(...)` / `default_min_size(...)`: apply min/max intervals.
+- `fill_max_width`, `fill_max_height`, `fill_max_size`: expand to the parent's finite maximum on that axis.
+- `required_width`, `required_height`, `required_size`: ignore incoming parent constraints when content must overflow.
+- `padding_all`, `padding_symmetric`, `padding(Padding::new(left, top, right, bottom))`: inset content inside the chain.
+- `offset(x, y)`: shift placement without changing the measured footprint or neighboring nodes.
 
-Some modifiers are instructions for the parent rather than for the node itself. `weight(1.0)` is read by rows and columns when they share out leftover space, and `align(...)` is read by `boxed()`. Other parents ignore them. [Layout basics](/guide/layout) shows these in context, together with what constraints are.
+### Visuals and clipping
 
-## Drawing
+- `background` / `background_with_shape`: paint behind the wrapped subtree.
+- `border` / `border_with_shape`: stroke above the wrapped subtree without taking layout space.
+- `shadow(&scheme, &ShadowArgs { .. })`: draw Material elevation shadows.
+- `clip_shape(shape)` / `clip_to_bounds()`: clip descendant drawing and pointer hit testing without affecting layout size. Note that `background_with_shape` only paints—add `clip_shape(shape)` with the same `Shape` when children must be clipped to those corners too.
+- `alpha(value)`: multiplies subtree opacity. It does **not** create an offscreen compositing group (overlapping children blend individually), and transparent nodes still participate in layout, focus, and semantics.
 
-Visual modifiers paint around the content without changing its size:
+### Interaction and semantics
 
-- `background` and `background_with_shape` paint behind the content, and `border` and `border_with_shape` paint a stroke above it. They take up no space, so add padding when content must keep clear of a stroke.
-- `shadow(&scheme, &ShadowArgs { .. })` draws an elevation shadow from the color scheme.
-- `clip_shape(shape)` and `clip_to_bounds()` keep descendants inside a shape or the rectangular bounds. Clipping affects drawing and hit testing, not measurement. A shaped background paints only; to clip content to the same shape, add `clip_shape` with that shape.
-- `alpha(value)` multiplies the subtree's opacity. It does not create an isolated layer, so overlapping children may not fade as one image. It is also not a disabled state: transparent content still takes part in layout, focus and semantics.
+- `clickable`, `toggleable`, `selectable`, and `draggable` connect pointer, keyboard activation, ripples, and accessibility metadata; see [Gestures, input, and focus](/guide/interaction).
+- `semantics` and `clear_and_set_semantics` attach or replace accessibility metadata; see [Semantics and accessibility](/guide/accessibility).
 
-When a surface uses a shadow, fill, border and clip together, give them the same `Shape` so their edges agree. Color roles and shape roles come from the theme; see [Material 3 theming](/guide/theming). For drawing that these modifiers cannot express, see [Drawing and shaders](/guide/drawing).
+## Reusing and composing modifiers
 
-## Interaction
+`Modifier` is a regular `Clone` value that allocates node state only when attached to a node during build. You can store a modifier chain in a variable, clone it, extend it, or append another chain with `.then(other)`.
 
-Interaction modifiers give a custom-looking subtree the behavior of a standard control. `clickable`, `toggleable` and `selectable` connect one action to pointer input, keyboard activation and the accessibility action, and `draggable` reports drag deltas. Each has a `_with` variant that takes a configuration struct.
-
-Where you put them in the chain decides how big the target is. In this row the click target is placed before the padding, so the padding is part of what you can press:
-
-```rust
-use tessera_components::{
-    modifier::{ClickableArgs, ModifierExt as _},
-    row::row,
-    text::text,
-};
-use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, tessera};
-
-#[tessera]
-fn settings_row(on_open: Callback) {
-    row()
-        .modifier(
-            Modifier::new()
-                .fill_max_width()
-                .clickable_with(ClickableArgs {
-                    label: Some("Open settings".into()),
-                    role: Some(Role::Button),
-                    on_click: on_open,
-                    ..Default::default()
-                })
-                .padding_all(Dp(16.0)),
-        )
-        .children(|| text("Settings"));
-}
-```
-
-The label and role are what make this target reachable from the keyboard: an enabled `clickable` registers a focus target once it has a role, a label or a description. [Gestures and interaction](/guide/interaction) covers the configuration structs, focus and raw input handlers.
-
-## Semantics
-
-`semantics(SemanticsArgs { .. })` attaches accessibility metadata, such as a name, role, value or test tag, to a subtree, leaving layout and drawing as they are. Interaction modifiers and standard controls publish their own semantics, so you reach for it mainly when you build something custom or need a stable tag in tests. [Semantics](/guide/semantics) explains the tree it builds.
-
-## Reuse modifiers
-
-A `Modifier` is an ordinary value. You can keep a chain in a variable, clone it, and keep extending the clone; any state a modifier needs is allocated when the chain is attached to a node, so building and cloning the value stays cheap. `then(other)` appends a whole chain after the current one.
-
-When you write your own component, accept the caller's chain as an optional `modifier` prop and put it first, so the caller's size and padding sit outside your own decoration.
+When writing reusable components, accept an `Option<Modifier>` parameter and start your root modifier chain from `modifier.unwrap_or_default()`:
 
 ```rust
-use tessera_components::{
-    modifier::ModifierExt as _, row::row, text::text, theme::MaterialTheme,
-};
+use tessera_components::{modifier::ModifierExt as _, row::row, text::text, theme::MaterialTheme};
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 
 #[tessera]
@@ -158,13 +132,17 @@ fn tag_row() {
 }
 ```
 
-The outer 4 dp padding stays unpainted because it comes before the tag's background.
+Putting the caller's `modifier` first ensures caller spacing and sizing sit *outside* the tag's own background and padding.
 
-## Write a modifier extension
+## Writing your own modifier helpers
 
-When the same combination keeps appearing, give it a name with an extension trait on `Modifier`. Most extensions only compose existing modifiers:
+If the same combination of modifiers keeps showing up, package it in an extension trait on `Modifier`:
 
 ```rust
+use tessera_components::{modifier::ModifierExt as _, theme::MaterialTheme};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera, use_context};
+
 trait CardModifierExt {
     fn card_surface(self, theme: &MaterialTheme) -> Modifier;
 }
@@ -187,8 +165,8 @@ fn card_title() {
 }
 ```
 
-Name the method after what it means, take owned configuration, and keep normal ordering: the extension's modifiers apply where the call sits in the chain.
+For capabilities that cannot be expressed from existing modifiers, implement node traits such as `LayoutModifier` or `DrawModifierNode` and attach them inside an extension method via `tessera_ui::modifier::ModifierCapabilityExt`. See [Custom layout and coordinates](/guide/custom-layout) and [Custom drawing and shaders](/guide/drawing).
 
-For behavior the existing modifiers cannot express, you implement a node trait and attach it through `tessera_ui::modifier::ModifierCapabilityExt`, for example `push_layout` for measurement or `push_draw` for painting. Keep those calls inside the extension, so application UI only calls the named method. [Custom layout](/guide/custom-layout) walks through a layout node, and [Drawing and shaders](/guide/drawing) covers draw nodes.
+## Next steps
 
-The [components API reference](https://tessera-ui.github.io/tessera/tessera_components/modifier/index.html) lists every method on `ModifierExt`.
+Read [Material 3 theming](/guide/theming) to see where `color_scheme`, `typography`, and `shapes` come from and how `surface()` interacts with content colors.

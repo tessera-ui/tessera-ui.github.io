@@ -14,66 +14,85 @@ type Titles = Record<string, string>;
 
 const SIDEBAR: { group: Titles; pages: [string, Titles][] }[] = [
   {
-    group: { en: "Get started", zh: "开始" },
+    group: { en: "Get started", zh: "起步" },
     pages: [
       ["", { en: "Introduction", zh: "介绍" }],
       ["getting-started", { en: "Getting started", zh: "快速开始" }],
-      ["tutorial", { en: "Tutorial", zh: "教程" }],
+      ["tutorial", { en: "Tutorial", zh: "教程：购物清单" }],
       ["project-structure", { en: "Project structure", zh: "项目结构" }],
     ],
   },
   {
-    group: { en: "Core concepts", zh: "核心概念" },
+    group: { en: "Core mental model", zh: "核心心智模型" },
     pages: [
       [
         "thinking-in-tessera",
         { en: "Thinking in Tessera", zh: "Tessera 的思维方式" },
       ],
-      ["state", { en: "State", zh: "状态" }],
+      ["state", { en: "State and sharing", zh: "状态与共享" }],
       [
         "lifecycle",
-        { en: "Lifecycle and side effects", zh: "生命周期与副作用" },
+        {
+          en: "Identity, lifecycle, and effects",
+          zh: "身份、生命周期与副作用",
+        },
       ],
-      ["modifiers", { en: "Modifiers", zh: "修饰符" }],
-      ["rendering", { en: "Rendering and performance", zh: "渲染阶段与性能" }],
-      ["semantics", { en: "Semantics", zh: "语义" }],
     ],
   },
   {
-    group: { en: "UI", zh: "界面" },
+    group: { en: "Building UI", zh: "构建界面" },
     pages: [
       ["layout", { en: "Layout basics", zh: "布局基础" }],
-      ["lists", { en: "Lists and scrolling", zh: "列表与滚动" }],
+      ["modifiers", { en: "Modifiers", zh: "修饰符" }],
+      ["theming", { en: "Material 3 theming", zh: "Material 3 主题与视觉样式" }],
+      ["lists", { en: "Lists, grids, and scrolling", zh: "列表、网格与滚动" }],
       ["text", { en: "Text and text input", zh: "文本与文本输入" }],
-      ["theming", { en: "Material 3 theming", zh: "Material 3 主题" }],
-      ["interaction", { en: "Gestures and interaction", zh: "手势与交互" }],
+      ["interaction", { en: "Gestures, input, and focus", zh: "手势、交互与焦点" }],
+      ["tasks", { en: "Background tasks", zh: "后台任务与异步工作" }],
       ["animation", { en: "Animation", zh: "动画" }],
-      ["custom-layout", { en: "Custom layout", zh: "自定义布局" }],
-      ["drawing", { en: "Drawing and shaders", zh: "绘制与着色器" }],
     ],
   },
   {
-    group: { en: "Build an app", zh: "构建应用" },
+    group: { en: "Build an app", zh: "应用工程化" },
     pages: [
-      ["app", { en: "Entry point and windows", zh: "应用入口与窗口" }],
-      ["navigation", { en: "Navigation", zh: "导航" }],
-      ["tasks", { en: "Background tasks", zh: "后台任务" }],
-      ["assets", { en: "Resources", zh: "资源" }],
-      ["i18n", { en: "Localization", zh: "多语言" }],
-      ["accessibility", { en: "Accessibility", zh: "无障碍" }],
-      ["testing", { en: "Testing", zh: "测试" }],
+      ["app", { en: "Entry point, windows, and sessions", zh: "应用入口、窗口与会话" }],
+      ["navigation", { en: "Navigation", zh: "页面导航" }],
+      ["assets", { en: "Assets, images, and fonts", zh: "资源、图片与字体" }],
+      ["i18n", { en: "Localization", zh: "多语言与本地化" }],
+      ["accessibility", { en: "Semantics and accessibility", zh: "语义与无障碍" }],
+      [
+        "testing",
+        { en: "Testing and headless automation", zh: "测试与无头自动化" },
+      ],
     ],
   },
   {
-    group: { en: "Platforms and release", zh: "平台与发布" },
+    group: { en: "Under the hood", zh: "底层与扩展" },
     pages: [
-      ["platforms", { en: "Platforms", zh: "平台概览" }],
+      [
+        "rendering",
+        {
+          en: "Rendering, incremental frames, and performance",
+          zh: "渲染、增量帧与性能",
+        },
+      ],
+      [
+        "custom-layout",
+        { en: "Custom layout and coordinates", zh: "自定义布局与局部坐标" },
+      ],
+      ["drawing", { en: "Custom drawing and shaders", zh: "自定义绘制与着色器" }],
       [
         "plugins",
         { en: "Platform integration and plugins", zh: "平台集成与插件" },
       ],
-      ["distribution", { en: "Packaging and release", zh: "打包发布" }],
-      ["cli", { en: "CLI reference", zh: "命令行参考" }],
+    ],
+  },
+  {
+    group: { en: "Platforms and CLI", zh: "平台与发布" },
+    pages: [
+      ["platforms", { en: "Platforms", zh: "目标平台" }],
+      ["distribution", { en: "Packaging and release", zh: "打包与发布" }],
+      ["cli", { en: "CLI and diagnostics", zh: "命令行与诊断参考" }],
     ],
   },
 ];

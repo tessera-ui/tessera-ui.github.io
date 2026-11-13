@@ -77,7 +77,7 @@ fn files() {
 
 如果条目会移动、插入或删除，就用记录本身稳定且在集合内唯一的标识作为键，就像上例用每条记录的 id 那样。数据变化之后，Tessera 靠键分辨哪个条目是哪个；键如何决定组件身份，见[生命周期与副作用](/zhHans/guide/lifecycle)。
 
-只有当位置本身就是条目的身份时，才适合用按索引的 `items(count, builder)`。`items_with_key(count, key_provider, builder)` 把取键和渲染分开：键提供函数是只负责计算键的普通 Rust 代码，组件在构建函数里调用；条目构建函数是 UI 内容闭包，捕获的值必须拥有所有权，并满足 `Send + Sync + 'static`。
+只有当位置本身就是条目的身份时，才适合用按索引的 `items(count, builder)`。`items_with_key(count, key_provider, builder)` 把取键和渲染分开：键提供函数是只负责计算键的普通 Rust 代码，组件在构建函数里调用；条目构建函数和键提供函数会被保存下来，捕获的值必须拥有所有权，并满足 `'static`；它们运行在 UI 线程上，不需要满足 `Send` 或 `Sync`。
 
 ### 视口外的条目会丢失局部状态
 

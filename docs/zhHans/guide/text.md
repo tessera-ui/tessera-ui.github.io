@@ -1,17 +1,17 @@
 ---
 title: 文本与文本输入
-description: 用主题的字体层级显示文本，并通过输入框接收用户输入的文字。
+description: 使用 Material 排版层级显示文本，并通过 text_field 与 TextInputController 收集用户输入。
 ---
 
 # 文本与文本输入
 
-界面上的大部分信息都靠文字传达。Tessera 用一个组件显示文本，用 Material 输入框收集文本，两者的字体和颜色都来自主题，同一界面上的标签因此保持一致。
+`text()` 负责显示统一样式的字符串，`text_field()` 提供完整的 Material 文本框，自带光标、选区、输入法组合和剪贴板集成。两者都会从 `MaterialTheme` 读取默认字体与颜色。
 
-本页示例都默认放在应用的 `material_theme()` 下运行，根组件的配置见 [Material 3 主题](/zhHans/guide/theming)。
+本页示例默认跑在 `material_theme()` 下，并在入口注册了 `ComponentsPackage`。
 
 ## 显示文本
 
-`text()` 用统一的一种样式绘制一段字符串。从主题的排版层级里选一个角色，这样主题变化时，标题和正文之间的比例仍然协调：
+从 `theme.typography` 里选择排版角色，标题和正文就能跟随主题比例协调变化：
 
 ```rust
 use tessera_components::{column::column, text::text, theme::MaterialTheme};
@@ -31,11 +31,11 @@ fn article_header() {
 }
 ```
 
-没有设置 `style` 时，`text` 先使用父级继承下来的 `TextStyle`（例如按钮会为自己的标签提供一份），没有的话再用主题的 `body_large`。颜色也按同样的顺序决定：先看显式的 `color`，再看继承的 `ContentColor`，最后是主题的 `on_surface`。所以放在按钮或填充表面里的文字，通常会自动用上合适的颜色。
+未显式指定 `style` 时，`text` 会优先读取父级继承的 `TextStyle`（例如按钮标签自带的样式），否则回退到 `theme.typography.body_large`。颜色同理：先看显式 `.color(...)`，再看继承的 `ContentColor`，最后取 `theme.color_scheme.on_surface`。
 
-## 设置文本样式
+## 样式覆盖与换行
 
-排版层级包含 display、headline、title、body 和 label 五类角色，每类有大、中、小三个尺寸。`TextStyle` 包含字号、可选的行高、字重、字间距和可选的字体族。某段内容需要和所属角色略有不同时，以该角色为基础，只改不同的部分：
+`MaterialTypography` 包含 `display`、`headline`、`title`、`body` 和 `label` 五组规格，每组有大、中、小三个尺寸，也提供 `.emphasized()` 强调样式。局部微调某项属性时，基于主题角色展开即可：
 
 ```rust
 use tessera_components::{
@@ -58,15 +58,15 @@ fn report_title() {
 }
 ```
 
-`single_line(true)` 让文本保持一行，放不下的部分以省略号结尾；不设置时，文本会按父级允许的宽度换行。没有指定行高时，默认取字号的 1.2 倍。临时覆盖某一项，也可以用 `text` 的 `size` 和 `line_height`。
+- `single_line(true)` 保持单行并在溢出时显示省略号；默认则按父级宽度约束自动换行。
+- 未指定 `line_height` 时默认取 `1.2 × font_size`；临时改单处尺寸可以用 `.size(...)` 和 `.line_height(...)`。
+- 需要朗读文本与显示文本不同时，用 `accessibility_label` 和 `accessibility_description` 覆盖。
 
-如果许多组件都要跟着变，就改一次主题排版；`theme.typography.emphasized()` 可以生成一套用于强调内容的更醒目的层级。`text` 只绘制一种样式，一句话里要混用不同字重或颜色时，需要把几个 `text` 排在一起。字体注册和回退见[资源](/zhHans/guide/assets)。
+字体注册和 Unicode 回退配置见[资源、图片与字体](/zhHans/guide/assets)。
 
-文本也会提供给无障碍服务：默认以显示的内容作为标签，角色为 label。朗读的名称需要和显示的文字不同时，用 `accessibility_label` 或 `accessibility_description` 覆盖。这些元数据的用途见[语义](/zhHans/guide/semantics)。
+## 文本输入框
 
-## 接收文本输入
-
-`text_field()` 是 Material 风格的输入框，编辑、选择、光标、输入法和剪贴板都已经替你处理好。通过构建器可以设置标签、占位文字和几种预设：
+`text_field()` 默认是填充式单行输入框，可以通过 setter 切到描边、密码遮罩或多行模式：
 
 ```rust
 use tessera_components::{
@@ -88,13 +88,11 @@ fn sign_in_form() {
 }
 ```
 
-输入框默认是填充样式、单行输入。`outlined()` 切换为描边样式，`TextFieldLineLimit::MultiLine` 允许多行。前后图标、前缀、后缀和错误状态等也都有对应的设置方法，完整列表见[输入框参考](https://tessera-ui.github.io/tessera/tessera_components/text_field/index.html)。
+`.read_only(true)` 允许选中和复制但禁止编辑；`.enabled(false)` 则完全禁用输入。单行提交使用 `.on_submit(...)`。
 
-`read_only` 和 `enabled` 代表两种不同的策略：只读输入框的内容仍然可用，只是不接受编辑；禁用的输入框则完全不接受用户输入。`on_submit` 处理单行输入框的提交。
+## 响应输入变化与过滤
 
-## 响应文本变化
-
-`on_change` 接收候选的 `String`，并且**返回最终接受的 `String`**，而不是 `()`。输入框保留的正是这个返回值，所以即使回调只是把文本记下来，也要把值返回：
+`on_change` 接收候选 `String` 并**返回最终接受的 `String`**——即便回调里只是把值存下来，也要把字符串返回给输入框：
 
 ```rust
 let query = remember(String::new);
@@ -104,7 +102,7 @@ text_field().label("Search").on_change(move |value: String| {
 });
 ```
 
-编辑规则应该写在 `input_transform` 里，它在 `on_change` 之前执行。下面的输入框只保留候选文本中的数字：
+输入格式限制写在 `input_transform` 中，它会在 `on_change` 之前执行：
 
 ```rust
 text_field()
@@ -112,15 +110,16 @@ text_field()
     .input_transform(|value: String| value.chars().filter(char::is_ascii_digit).collect());
 ```
 
-这类规则都放在 `input_transform` 里。组件函数体每次重建都会运行，不适合用来修改用户输入的内容。
+## 用控制器读写文本和焦点
 
-## 在代码中控制文本
-
-如果你没有传入控制器，`text_field()` 会自己创建并持有一个。当应用动作需要读取或替换文本、或者把焦点移到编辑器上时，就自己保存一个 `TextInputController`：
+需要在外部按钮或动作里读取、清空文本或拉起焦点时，自己 `remember` 一个 `TextInputController` 并传给 `.controller(...)`：
 
 ```rust
 use tessera_components::{
-    button::button, column::column, text::text, text_field::text_field,
+    button::button,
+    column::column,
+    text::text,
+    text_field::text_field,
     text_input::TextInputController,
 };
 use tessera_ui::{Dp, remember, tessera};
@@ -140,18 +139,15 @@ fn search_field() {
 }
 ```
 
-用 `editor.with(|editor| editor.text())` 读取当前内容。`initial_text` 只在内部控制器创建时提供一次初始文本，之后的重建会保留当前文本。传入外部控制器时，请直接初始化它。
+仅当使用内置控制器时才通过 `initial_text` 设初值；传入外部控制器时直接初始化控制器本身即可。
 
-## 输入法与剪贴板
+## 输入法、右键菜单与剪贴板
 
-编辑器已经处理了选择、IME 预编辑和已提交文本、光标定位以及剪贴板编辑。请在它的基础上处理文本输入，而不是靠按键拼接文本：一次按键不一定对应一个字符，输入法也可能改写用户尚未完成的组合文本。
+`TextFieldContextMenu` 控制剪切、复制、粘贴与全选菜单；`.secure()` 会自动切换到 `TextFieldContextMenu::secure_default()`（关闭剪切和复制）。
 
-`TextFieldContextMenu` 用来配置输入框的剪切、复制、粘贴和全选菜单。`secure()` 会遮盖显示内容、限制为单行，并换用不提供剪切和复制的上下文菜单策略。
+如果基于 `ImeInput`、`ImeSession`、`ImeRequest` 与 `ClipboardInput` 编写自定义编辑器：
 
-::: warning 注意
-敏感数据仍需由应用自身保护。这些设置只改变输入框的显示内容和菜单选项。
-:::
+- 通过 `ImeInput` 接收输入法组合与提交事件，不要靠按键自己拼接字符。
+- 异步编辑写回前先核对当前文本与选区是否一致；实现剪切时使用 `ClipboardInput::write_text`，在平台确认剪贴板写入成功后再删除选中文本。
 
-应用异步编辑结果之前，先确认它仍然对应当前的内容和选择。比如剪切，要等剪贴板写入成功后再删除文本。获得焦点的剪贴板输入路径通过 `ClipboardInput::write_text` 支持这一点：只有平台确认成功，完成回调才会运行。普通的文本编辑仍然走现有的控制器和输入管线。
-
-完全自定义的编辑器通过 `ImeInput` 接收组合输入，再通过 `ImeSession` 和 `ImeRequest` 发布文本、选择和输入配置。除了键盘处理器，它还需要键盘焦点、剪贴板处理和无障碍语义。原始输入 trait 见[手势与交互](/zhHans/guide/interaction)，编辑器的约定见[文本输入参考](https://tessera-ui.github.io/tessera/tessera_components/text_input/index.html)。
+底层输入扩展 trait 见[手势、交互与焦点](/zhHans/guide/interaction)。

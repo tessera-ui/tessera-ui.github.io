@@ -1,23 +1,26 @@
 ---
-title: Lists and scrolling
-description: Scroll content that does not fit, and show long collections with lazy lists and grids.
+title: Lists, grids, and scrolling
+description: Scroll finite containers, virtualize long feeds with lazy lists and grids, and control scroll positions.
 ---
 
-# Lists and scrolling
+# Lists, grids, and scrolling
 
-Many screens show more content than fits in the window: a settings page, a chat history, a photo library. For a modest amount of content you can make an ordinary column scroll. For long or unbounded collections, lazy lists and grids build only the items you can see, so the cost of a screen stays proportional to the viewport rather than to the data.
+When content exceeds the viewport, small fixed forms can simply wrap a `column` with a scroll modifier. For long or dynamic collections, Tessera's lazy lists and grids only build and lay out the items visible in the viewport, keeping frame cost tied to screen size rather than total item count.
 
-The examples on this page need a `material_theme()` ancestor, and the application has to register `ComponentsPackage`.
+Examples below assume `material_theme()` above them and `ComponentsPackage` registered at startup.
 
-## Make content scrollable
+## Scrollable containers
 
-A scroll modifier wraps its content in a viewport. Keep the `ScrollableController` with `remember` so the scroll position survives rebuilds:
+Wrap a container in a scroll modifier and remember a `ScrollableController` so the scroll offset survives rebuilds:
 
 ```rust
 use tessera_components::{
-    column::column, modifier::ModifierExt as _, scrollable::ScrollableController,
+    column::column,
+    modifier::ModifierExt as _,
+    scrollable::ScrollableController,
     text::text,
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
 
 #[tessera]
@@ -38,24 +41,22 @@ fn notes() {
 }
 ```
 
-Use `horizontal_scroll` for horizontal content, or `scroll(controller, vertical, horizontal)` to choose both axes. Scrolled content is clipped to its viewport.
+Use `horizontal_scroll(controller)` for horizontal scrolling, or `scroll(controller, vertical, horizontal)` for both axes. Descendants are clipped to the viewport.
 
-A scrolling column still builds all forty lines on every rebuild. That suits a form or a page of text; for a list whose length depends on data, use a lazy list.
+Notice the explicit `.height(Dp(240.0))`: a scroll viewport must have a finite bound along its scroll axis (either from its parent or from a size modifier). Note also that a plain `column` with `vertical_scroll` still builds all 40 lines on rebuild—great for settings forms or short articles, not for large feeds.
 
-## Give the viewport a finite size
-
-The viewport needs a finite size on the scrolling axis, either from its parent or from an explicit size like the `height(Dp(240.0))` above. Without one there is no edge to scroll past. The same applies to lazy lists and grids below.
-
-::: warning
-When you nest a scroll container inside another one on the same axis, give the inner viewport a bounded size. Inside a scrolling parent the scrolling axis is unbounded, so filling that axis leaves the inner container without a usable viewport.
+::: warning Nested same-axis scrollers
+Inside a vertical scroller, the incoming height constraint is unbounded (`max == None`). Never place a `fill_max_height()` child scroller directly inside it without a bounded height; give the inner scroller an explicit size.
 :::
 
-## Show long lists lazily
+## Virtualized lists: `lazy_column` and `lazy_row`
 
-`lazy_column()` and `lazy_row()` only build the items inside the viewport plus the configured `overscan`. You add their content with `item`, `items` or their keyed forms:
+`lazy_column()` and `lazy_row()` build only visible items plus a small `overscan` margin. Add entries with `item`, `items`, `items_from_iter_with_key`, and `sticky_header`:
 
 ```rust
-use tessera_components::lazy_list::lazy_column;
+use tessera_components::{lazy_list::lazy_column, text::text};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
 fn files() {
@@ -71,26 +72,30 @@ fn files() {
 }
 ```
 
-`item_spacing` puts a gap between items and `content_padding` adds padding around the whole list. Lists also accept `sticky_header` declarations for section headers that stay pinned while their section scrolls.
+`item_spacing` sets the gap between items, `content_padding` pads the outer viewport edges, and `sticky_header` / `sticky_header_with_key` pin section headers while their section scrolls through.
 
-## Give items stable keys
+## Stable keys and offscreen item state
 
-When items can move, be inserted or be removed, key them by a stable record identifier that is unique within the collection, as the example above does with each record's id. The key tells Tessera which item is which after the data changes; see [Lifecycle and side effects](/guide/lifecycle) for how keys give components identity.
+Whenever items can be inserted, removed, or reordered, pass a stable business ID to `items_with_key` or `items_from_iter_with_key` (only use unkeyed `items(count, ...)` when the index itself is the item's identity). Remember two closure rules:
 
-The index-based `items(count, builder)` fits only when an item's position is its identity. `items_with_key(count, key_provider, builder)` keeps key lookup separate from rendering; the key provider is plain Rust that only computes keys, and components are called from the builder. Item builders are UI content closures, so their captures must be owned and `Send + Sync + 'static`.
+- Key provider closures run as ordinary Rust code; item builder closures are Tessera build closures.
+- Both closures are stored in props, so their captures must be owned and `'static` (UI-thread-local types are fine).
 
-### Offscreen items lose local state
+By default (`keep_composed_items(false)`), items that scroll far out of the viewport are unmounted, so any `remember` state inside an item component resets when it scrolls back in. You can pass `.keep_composed_items(true)` to retain visited items until the list itself unmounts (trading memory for preservation), though the idiomatic pattern is to hoist durable data (checkbox state, drafts) into a `State` or `Model` owned outside the list.
 
-A key alone does not keep an offscreen item's local state alive. When an item scrolls far enough out of view, its components are dropped, and anything it kept with `remember` starts over when it comes back. Lists default to `keep_composed_items(false)`. Setting `keep_composed_items(true)` keeps the state of every visited item until the list unmounts, which can increase memory use.
+## Controlling scroll position
 
-The usual answer is to keep data that has to last, such as a checkbox's value or a draft reply, in state owned outside the individual item components and pass it in. See [State](/guide/state) for hoisting.
-
-## Control the scroll position
-
-To read or change a lazy list's position from outside, create a `LazyListController`, keep it with `remember` and pass it to the list. Here a button scrolls back to the first entry:
+Create and `remember` a `LazyListController` to jump or inspect scroll state from outside the list:
 
 ```rust
-use tessera_components::{button::button, lazy_list::LazyListController};
+use tessera_components::{
+    button::button,
+    column::column,
+    lazy_list::{LazyListController, lazy_column},
+    text::text,
+};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, remember, tessera};
 
 #[tessera]
 fn history() {
@@ -107,14 +112,19 @@ fn history() {
 }
 ```
 
-`scroll_to_item(index, offset)` reveals an item at an offset from the viewport start and ignores indices outside the list. `scroll_to(x, y)` scrolls to content offsets instead. The controller owns the scroll position and measurement caches, so keeping the controller around preserves them across navigation.
+`scroll_to_item(index, offset)` jumps to an item at `offset` from the viewport start (out-of-range indices are ignored), and `scroll_to(x, y)` scrolls by content offset.
 
-## Lay items out in a grid
+## Grids, staggered grids, and pagers
 
-For a tiled collection, use `lazy_vertical_grid()` and describe its columns with `GridCells`. The adaptive form fits as many columns of at least the given width as the space allows:
+For multi-column or multi-row layouts, use `lazy_vertical_grid()` (configuring `.columns(...)`) or `lazy_horizontal_grid()` (configuring `.rows(...)`) with `GridCells`:
 
 ```rust
-use tessera_components::lazy_grid::{GridCells, lazy_vertical_grid};
+use tessera_components::{
+    lazy_grid::{GridCells, lazy_vertical_grid},
+    text::text,
+};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
 fn photo_grid() {
@@ -127,6 +137,12 @@ fn photo_grid() {
 }
 ```
 
-`fill_max_size` gives the grid a bounded viewport only if its parent has a finite height. `GridCells::fixed(3)` sets a fixed number of columns, and `GridCells::fixed_size(Dp(160.0))` sets a fixed cell size on the cross axis. `lazy_horizontal_grid()` uses `rows(...)` instead. For masonry layouts with variable-size tiles, use `lazy_vertical_staggered_grid()` or `lazy_horizontal_staggered_grid()`.
+- `GridCells::adaptive(min_size)`: fits as many columns/rows of at least `min_size` as available space allows.
+- `GridCells::fixed(count)`: fixes an exact lane count.
+- `GridCells::fixed_size(size)`: fixes each cell's cross-axis extent.
 
-The [lazy list](https://tessera-ui.github.io/tessera/tessera_components/lazy_list/index.html), [lazy grid](https://tessera-ui.github.io/tessera/tessera_components/lazy_grid/index.html) and [staggered grid](https://tessera-ui.github.io/tessera/tessera_components/lazy_staggered_grid/index.html) references document their controllers and item declarations.
+For uneven-height masonry layouts, use `lazy_vertical_staggered_grid()` or `lazy_horizontal_staggered_grid()`. For full-page swipeable views with snapping, use `horizontal_pager()` or `vertical_pager()` paired with `PagerController`.
+
+## Next steps
+
+See [Text and text input](/guide/text) to style text and wire up editable fields, or check the [component API reference](https://tessera-ui.github.io/tessera/tessera_components/) for full controller methods.

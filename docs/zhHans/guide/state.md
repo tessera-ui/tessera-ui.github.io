@@ -1,15 +1,15 @@
 ---
-title: 状态
-description: 让数据在重建之间保留，决定由谁持有它，并把它交给需要的组件。
+title: 状态与共享
+description: 用 remember 管理局部状态、通过状态提升共享数据、用 Model 组织页面逻辑，并用 Context 传递环境默认值。
 ---
 
-# 状态
+# 状态与共享
 
-Tessera 每次重建组件都会重新执行组件函数，所以局部变量只在一次执行内有效。状态让值能够跨越重建保留下来；修改状态，也就是在告诉 Tessera 界面的哪些部分需要更新。
+组件函数在界面更新时会重新运行，普通局部变量无法跨帧保留。使用 `State`、`Model` 和 `Context`，为每份数据指定明确的所有者，让屏幕随数据自动同步。
 
-## 在重建之间记住一个值
+## 用 `remember` 保存组件局部状态
 
-用 `remember` 保存一个值，它就会在重建之间保留。`remember` 返回一个 `State<T>` 句柄，复制和传递的成本都很低。下面的计数器把计数保存在记住的状态里，再把句柄交给负责显示的子组件：
+`remember` 在组件首次挂载时初始化值，并返回一个轻量的 `Copy` 句柄（`State<T>`）：
 
 ```rust
 use tessera_components::{button::button, column::column, text::text};
@@ -32,36 +32,32 @@ fn counter() {
 }
 ```
 
-这个组件要放在应用提供的 Material 主题之下。初始化闭包 `|| 0i32` 只在状态槽首次创建时执行一次，之后的重建直接返回已有的值，不会再调用它。
+只在构建上下文中调用 `remember`（以及 `remember_with_key`、`retain`、`retain_with_key`），不要放进事件回调或普通辅助函数。保存的值必须满足 `'static`，可以是 `!Send`（例如 `Rc`），此时句柄留在 UI 线程上使用。
 
-`remember` 依靠构建时的调用位置找到对应的状态槽，因此要在组件或受认可的构建闭包执行构建时调用。动作和后台任务运行在构建之外，那里没有可以对应的状态槽。`remember_with_key`、`retain` 和 `retain_with_key` 也是如此。保存的值必须满足 `Send + Sync + 'static`。
-
-`State<T>` 句柄只是一个引用，背后状态槽的生命周期与句柄有多少份副本无关。状态槽能存在多久，见[生命周期与副作用](/zhHans/guide/lifecycle)。
-
-## 读写
+## 读写 `State<T>`
 
 | 方法 | 行为 |
 | --- | --- |
-| `get()` | 克隆值，需要 `Clone` |
-| `with(f)` | 短暂借用读取 |
-| `set(value)` | 替换值，使读取者失效 |
-| `with_mut(f)` | 修改值，使读取者失效 |
-| `set_if_changed(value)` | 只有值不同时才替换并使读取者失效，返回是否发生了变化；需要 `PartialEq` |
-| `is_alive()` | 检查句柄是否仍指向当前会话中的有效状态 |
+| `get()` | 克隆当前值（要求 `T: Clone`）。 |
+| `with(f)` | 在闭包 `f` 内借用 `&T`。 |
+| `set(value)` | 替换值并通知读取者更新。 |
+| `with_mut(f)` | 可变借用 `&mut T` 修改值并通知读取者更新。 |
+| `set_if_changed(value)` | 仅当 `value != current` 时才替换并通知（要求 `T: PartialEq`），返回是否变化。 |
+| `is_alive()` | 判断底层状态是否仍有效。 |
 
-只要值满足上述约束，`State<T>` 就是 `Copy + Send + Sync`，可以随意移入闭包。读写仍然发生在拥有该状态的 UI 会话中。访问过期句柄或其他会话的句柄会 panic；如果需要先确认，就先调用 `is_alive()`，对这类句柄它会返回 `false`。工作线程上的任务通过[调度器](/zhHans/guide/tasks)把结果送回 UI 会话，在那里写入状态。
+`State<T>` 实现了 `Copy`，直接移入多个闭包即可，无需 `.clone()`。当 `T: Send` 时，`State<T>` 同时满足 `Send + Sync`，可在后台任务中用同一套方法安全读写。如果清理逻辑可能比所有者活得更久，先用 `is_alive()` 检查后再访问。
 
-## 什么会触发重建
+## 在叶子节点读取状态
 
-组件在构建期间读取状态时，Tessera 会记下这个组件依赖该状态。之后的写入会使这些读取者失效，它们随之重建，应用的其他部分不受影响。事件回调里的读取发生在构建之外，不会建立依赖。
+在构建期间调用 `get()` 或 `with(...)` 会让当前组件订阅该状态；事件回调里的读取发生在构建之外，不会建立订阅。
 
-所以，读取状态的位置应尽量靠近显示它的地方。计数器中由 `count_label` 读取 `count`，父组件只负责传递句柄。计数变化时，只有标签重建，外层的列保留上一次的结果。
+**把 `State<T>` 句柄传下去，在真正需要显示的最小叶子组件里再读取。** 上面的计数器里，`counter` 只传递句柄不读取它，点击按钮时就只会重建 `count_label`。
 
-模型较大时，用 `with` 借用它，就地读取需要的部分。借用要尽量短；等 `with_mut` 结束之后，再访问同一个状态。还要注意，`set` 和 `with_mut` 总会发布写入，即使新值和旧值相等。对于经常算出相同结果的值，使用 `set_if_changed`，它只在值确实变化时唤醒读取者。
+结构体较大时用短生命周期的 `with(|v| ...)` 借用；经常算出相同结果的计算，用 `set_if_changed` 避免无意义的更新。
 
-## 把状态提升给调用方
+## 状态提升与派生计算
 
-组件自己持有状态用起来方便，这份状态也只属于它自己。如果父组件需要读取或控制它，就把状态往上移，让子组件变成*无状态*的：它通过属性接收当前值，通过回调报告变化。这种做法叫作状态提升。
+当父组件或兄弟组件需要读取、约束同一份数据时，把状态提升到它们最近的共同祖先，让子组件接收当前值并通过回调上报修改：
 
 ```rust
 use tessera_components::{button::button, row::row, text::text};
@@ -95,17 +91,9 @@ fn order_line() {
 }
 ```
 
-现在数量只有一个可信来源，由 `order_line` 持有，“数量不能小于 1”这条规则也由它来保证。相同的属性总是产生相同的输出，`stepper` 因此更容易复用，也更容易测试。
+文本编辑、滚动位置这类持续交互状态，直接保留并传入对应的控制器（`TextInputController`、`ScrollableController`、`LazyListController`）。
 
-状态应提升到所有读写它的组件的最近共同所有者。多个组件需要同一份状态时，把它放在最近的共同祖先中，再向下传递。
-
-传值还是传 `State<T>` 句柄都可以。像上面这样传值，子组件不关心数据存在哪里；像计数器那样传句柄，子组件自己读取，值变化时只有子组件重建。如果父组件自己用不到这个值，又希望重建范围尽量小，就传句柄。
-
-编辑、滚动这类持续进行的交互，请使用组件的控制器。控制器跨越多次构建持有持续进行的命令和交互状态，配置句柄则只描述一次构建。
-
-## 计算派生值，而不是同步它们
-
-如果一个值能从已有状态算出来，就在用到它的地方直接计算，让它只有一个来源。把派生出来的文字或几何数据复制到另一份可变状态里，就得手动保持同步，两份数据也可能互相矛盾。
+能从已有状态算出来的值，直接在构建时计算，不要另建一个 `State` 去手动双份同步：
 
 ```rust
 use tessera_components::text::text;
@@ -124,92 +112,46 @@ fn remaining_label(tasks: State<Vec<Task>>) {
 }
 ```
 
-`remaining_label` 在构建时读取了 `tasks`，列表一变它就会重建，显示的数量始终是最新的。
+## 用 `Model<T>` 组织页面与业务状态
 
-## 用上下文提供继承的默认值
-
-有些值作用于整棵子树，而不是某一个组件，比如主题、当前文字样式、表面上内容的颜色。上下文让祖先提供一次这样的值，任何后代都能读取，类似 Jetpack Compose 中的 `CompositionLocal`。
-
-`provide_context(init, content)` 在 `content` 构建期间提供一个值。下面这个块里的每个 `text` 都会从上下文中取得红色的内容颜色：
-
-```rust
-use tessera_components::{column::column, text::text, theme::ContentColor};
-use tessera_ui::{Color, provide_context, tessera};
-
-#[tessera]
-fn warning_block() {
-    provide_context(
-        || ContentColor { current: Color::RED },
-        || {
-            column().children(|| {
-                text("Storage almost full");
-                text("Free up space to keep syncing.");
-            });
-        },
-    );
-}
-```
-
-读取时，`use_context::<T>()` 返回最近的 `Context<T>`，如果没有祖先提供则返回 `None`。通过它的 `with` 方法读取；和状态一样，构建期间的读取会让读取者订阅这个值。用这种方式读取 `MaterialTheme` 的示例见 [Material 3 主题](/zhHans/guide/theming)。
-
-这两个函数都需要构建上下文。和 `remember` 一样，提供方的初始化闭包只在上下文槽创建时执行一次，之后的重建沿用它产生的值。
-
-::: warning 注意
-上下文用于主题和继承的视觉默认值。数据和控制器请通过属性传递，动作通过回调报告。从上下文里取数据的组件，会把这份依赖藏在签名之外，复用和理解都会变难。
-:::
-
-## 为状态指定显式所有者
-
-记住的状态属于组件挂载的位置，而控制器或服务往往需要自己的生命周期，`StateOwner` 就是为此提供的。在有效的 UI 会话中创建所有者，再向它申请带 key 的状态：
-
-```rust
-let owner = tessera_ui::StateOwner::new();
-let selected = owner.state_with_key("selected", || None::<u64>);
-let dispatcher = owner.dispatcher();
-```
-
-所有者中的状态在读写和重建上与记住的状态完全一样，只是生命周期不同。所有者的 `dispatcher()` 用来把后台结果送回这段生命周期，用法见[后台任务](/zhHans/guide/tasks)。
-
-常见的用法是写一个小控制器，把所有者和它的状态放在一起，再对外提供方法。控制器只创建一次（这里用 `remember` 保存），需要的地方传它的克隆：
+当一个页面或功能模块包含多项操作、内部缓存和后台 `Task` 时，为其实现 `ModelInit`。UI 要读取的字段在 `init()` 中用 `State::new(...)` 创建，无需触发刷新的内部字段（缓存、任务句柄）作为普通私有字段由 `&mut self` 方法维护：
 
 ```rust
 use tessera_components::{button::button, column::column, text::text};
-use tessera_ui::{State, StateOwner, key, remember, tessera};
+use tessera_ui::{Model, ModelInit, State, key, tessera};
 
-#[derive(Clone, PartialEq)]
-pub struct SelectionController {
-    owner: StateOwner,
+struct Selection {
     selected: State<Option<u64>>,
+    history: Vec<u64>,
 }
 
-impl SelectionController {
-    pub fn new() -> Self {
-        let owner = StateOwner::new();
-        let selected = owner.state_with_key("selected", || None);
-        Self { owner, selected }
+impl ModelInit for Selection {
+    fn init() -> Self {
+        Self {
+            selected: State::new(None),
+            history: Vec::new(),
+        }
     }
+}
 
-    pub fn selected(&self) -> Option<u64> {
-        self.selected.get()
-    }
-
-    pub fn select(&self, id: u64) {
+impl Selection {
+    fn select(&mut self, id: u64) {
+        self.history.push(id);
         self.selected.set(Some(id));
     }
 }
 
 #[tessera]
-fn contact_list(contacts: Vec<(u64, String)>) {
-    let controller = remember(SelectionController::new).get();
+fn contact_list(contacts: Vec<(u64, String)>, selection: Model<Selection>) {
+    let selected = selection.with(|selection| selection.selected);
     column().children(move || {
         for (id, name) in &contacts {
             let id = *id;
-            let marker = if controller.selected() == Some(id) { "> " } else { "" };
+            let marker = if selected.get() == Some(id) { "> " } else { "" };
             let label = format!("{marker}{name}");
-            let controller = controller.clone();
             key(id, || {
                 button()
-                    .on_click(move || controller.select(id))
+                    .on_click(move || selection.with_mut(|selection| selection.select(id)))
                     .child(move || text(label.clone()));
             });
         }
@@ -217,8 +159,40 @@ fn contact_list(contacts: Vec<(u64, String)>) {
 }
 ```
 
-所有者只创建一次，并和控制器保存在一起；如果每次构建都新建一个，状态每次都会丢失。所有者的各个克隆共享同一个生命周期，而且 `StateOwner` 按身份比较相等，所以持有它的控制器可以作为属性传递。所有者何时、如何释放状态，见[生命周期与副作用](/zhHans/guide/lifecycle#关闭状态所有者)。
+`Model<T>` 同样是 `Copy` 句柄（`T: Send` 时 `Send + Sync`）。只有读取内部的 `State` 字段才会订阅更新，修改 `history` 这类普通字段不会触发界面重建。
+
+组件声明 `Model<T>` 参数后有两种用法：
+
+- 调用时省略（`contact_list(contacts)`），由框架注入：在 `ModelStoreScope`（如 `shard_home` 路由）下按类型共享同一实例；否则随当前组件同生共死。
+- 通过 setter 显式传入已有句柄（`contact_list(contacts).selection(existing_model)`），由调用方决定作用域。
+
+请始终在 `ModelInit::init` 或 `ModelStore::model` 中调用 `State::new`，也不要把 `remember` 状态放进 `Model` 字段。需要独立控制模型作用域时，可自行创建 `ModelStore` 并通过 `provide_context(store.scope(), ...)` 提供给子树。
+
+## 用 `Context` 传递环境默认值
+
+使用 `provide_context(value, content)` 与 `use_context::<T>()` 为整棵子树提供主题、字号、内容颜色等环境配置，避免层层透传：
+
+```rust
+use tessera_components::{column::column, text::text, theme::ContentColor};
+use tessera_ui::{Color, provide_context, tessera};
+
+#[tessera]
+fn warning_block() {
+    provide_context(ContentColor { current: Color::RED }, || {
+        column().children(|| {
+            text("Storage almost full");
+            text("Free up space to keep syncing.");
+        });
+    });
+}
+```
+
+`use_context::<T>()` 返回 `Option<Context<T>>`。在构建期间调用 `.get()` 或 `.with(...)` 会自动订阅该上下文的变化。
+
+::: warning 保持 Context 的纯粹性
+把 `Context` 留给主题与视觉默认值。业务数据和控制器应通过显式参数传递，事件通过回调上报，让组件的依赖一目了然。
+:::
 
 ## 下一步
 
-状态存放在各自有生命周期的槽里。[生命周期与副作用](/zhHans/guide/lifecycle)介绍 Tessera 如何把状态对应到组件、何时释放状态，以及带副作用的工作应该放在哪里。
+阅读[身份、生命周期与副作用](/zhHans/guide/lifecycle)，合理选择不同状态的保留范围，并把副作用放在正确的位置。

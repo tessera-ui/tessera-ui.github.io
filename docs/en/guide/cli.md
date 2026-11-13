@@ -1,232 +1,64 @@
 ---
-title: CLI reference
-description: Every cargo tessera command and its flags, grouped by task.
+title: CLI and diagnostics
+description: Reference for cargo tessera commands, call-boundary error codes (T0001–T0007), and Tessera lints.
 ---
 
-# CLI reference
+# CLI and diagnostics
 
-`cargo-tessera` creates projects, runs the development loop, checks Tessera's call rules and builds every platform target. Install it once, then run its commands as a Cargo subcommand:
+`cargo-tessera` provides project scaffolding, static call-boundary checking, live development loops, offscreen headless sessions, profiling analysis, and platform builds. Run `cargo tessera --help` or `cargo tessera <cmd> --help` for the exact flags of your installed version.
 
-```sh
-cargo install cargo-tessera --locked
-cargo tessera new my-app --template basic
-cd my-app
-cargo tessera dev
-```
+## Project, plugin, and skill commands
 
-Options belong to individual commands, and each command accepts only the options listed for it; arbitrary Cargo flags are not passed through. Run `cargo tessera --help`, or add `--help` after any subcommand, to see the list for your installed version. Unless a command says otherwise, it builds with the debug profile, so add `--release` for anything you ship.
-
-## Projects and plugins
-
-| Command | Options |
+| Command | Purpose |
 | --- | --- |
-| `cargo tessera new [NAME]` | `--template`, `-t`: `basic` or `blank`. |
-| `cargo tessera plugin new [NAME]` | `--template`, `-t`: `basic` or `android`. |
+| `cargo tessera new [NAME] [-t basic\|blank]` | Scaffold a new Tessera app |
+| `cargo tessera plugin new [NAME] [-t basic\|android]` | Scaffold a Tessera plugin crate |
+| `cargo tessera skill [--local\|--global\|--path DIR] [--force]` | Install the bundled `tessera-good-taste` agent skill |
 
-If you omit the name or the template, the command asks for it. See [Getting started](/guide/getting-started) and [Platform integration and plugins](/guide/plugins#create-a-plugin-crate).
+## Development, build, and packaging
 
-## Development
+- **`cargo tessera dev`**: watches and rebuilds/restarts desktop apps (`-p`, `-r`/`--release`, `-v`, `--top`, `--debug-dirty-overlay`, `--profiling-output FILE`, `--asset-backend embed\|platform`).
+- **`cargo tessera build`**: checks boundaries and builds native binaries (`-r`, `-p`, `-t`/`--target`, `--bin`, `--profiling-output`, `--debug-dirty-overlay`, `--asset-backend`).
+- **`cargo tessera package`**: builds with platform assets and invokes `cargo-packager` (`-r`, `-p`, `-t`, `--bin`, `-f`/`--formats`).
+- **`cargo tessera android {init, build, dev, rust-build}`**: Gradle project sync, APK/AAB builds (`--format`, `--arch`), and live device deployment (`--device`).
+- **`cargo tessera ios build`**: builds simulator `.app` or device `.ipa` on macOS (`--device`, `--signing-identity`, `--provisioning-profile`, `--profiling-output`).
+- **`cargo tessera web {init, build, dev}`**: initializes browser host, builds WebAssembly (`-r`, `-p`, `-F`/`--features`), or serves `gen/web/` locally (`--port`).
 
-`cargo tessera dev` watches the project, rebuilds it and restarts the desktop app after each change. Each restart is a new process, so the app starts again from its initial state.
+## Headless and profiling commands
 
-| Option | Meaning |
-| --- | --- |
-| `--package NAME`, `-p` | Package to run. |
-| `--release`, `-r` | Use the release profile. |
-| `--verbose`, `-v` | Show verbose output. |
-| `--profiling-output FILE` | Enable profiling and write JSONL records to `FILE`. Desktop only. |
-| `--top` | Show a live, `top`-like component profiler in the terminal. |
-| `--debug-dirty-overlay` | Overlay dirty replay regions with a translucent color. |
-| `--asset-backend embed\|platform` | Override how assets are delivered. |
+- **`cargo tessera headless`**: runs the JSONL offscreen session supervisor (`-p`, `-r`, `--width`, `--height`, `--frame-time-ms`, `--profiling-output`).
+- **`cargo tessera profiling analyze PATH`**: summarizes desktop/headless JSONL profiles (`-v`, `--top N`, `--min-count N`, `--skip-invalid`, `--csv FILE`).
+- **`cargo tessera profiling analyze-android --package ID`**: pulls profiler output via `adb` and analyzes it (`-d`/`--device`, `--remote-path`, `--pull-to`, plus analysis flags).
 
-For Android and the web, use [`android dev`](#android) and [`web dev`](#web). What the profiling and overlay output tell you is explained in [Rendering phases and performance](/guide/rendering).
+## Static checking (`check` and `fix`)
 
-## Builds and packaging
-
-`cargo tessera build` checks Tessera call boundaries, then compiles a native target.
-
-| Option | Meaning |
-| --- | --- |
-| `--release`, `-r` | Use the release profile. |
-| `--package NAME`, `-p` | Package to build. |
-| `--target TRIPLE`, `-t` | Rust target triple, passed to `cargo build`. |
-| `--bin NAME` | Executable to build. |
-| `--profiling-output FILE` | Enable profiling and write JSONL records. Not supported for Android targets. |
-| `--debug-dirty-overlay` | Overlay dirty replay regions with a translucent color. |
-| `--asset-backend embed\|platform` | Override asset delivery. Defaults to `embed`, or `platform` for Android targets. |
-
-`cargo tessera package` builds the app with platform assets and produces a desktop installer or bundle through `cargo-packager`, which must be installed.
-
-| Option | Meaning |
-| --- | --- |
-| `--release`, `-r` | Use the release profile. |
-| `--package NAME`, `-p` | Package to bundle. |
-| `--target TRIPLE`, `-t` | Rust target triple. Android, iOS and wasm targets are rejected. |
-| `--bin NAME` | Executable to bundle. |
-| `--formats LIST`, `-f` | Comma-separated: `default`, `all`, `nsis`, `wix`, `app`, `dmg`, `deb`, `appimage`, `pacman`. |
-
-Host requirements, output paths and signing are covered in [Packaging and release](/guide/distribution).
-
-## Checking and fixes
-
-`cargo tessera check` checks compilation and Tessera call boundaries. A component may call ordinary Rust code. Components and Tessera-only APIs may be called only from a build context. Ordinary helpers and event callbacks are ordinary code, even when the closure is written inside a component; see [Thinking in Tessera](/guide/thinking-in-tessera).
+`cargo tessera check` validates Tessera execution and ownership rules with `rust-analyzer` before running `cargo check`:
 
 ```sh
 cargo tessera check -p my-app --all-targets
 cargo tessera check -D warnings
 cargo tessera check --explain T0001
-```
-
-`--explain CODE` prints the explanation for a diagnostic code and exits without running the check. It is an option of `check`.
-
-`cargo tessera fix` applies machine-applicable Tessera suggestions, runs `cargo fix` and checks the result. It selects all targets by default; pass a target selector to narrow it. You review the remaining suggestions yourself.
-
-```sh
 cargo tessera fix -p my-app
 ```
 
-`check` and `fix` share these selection and output options:
+Both `check` and `fix` accept Cargo selection flags (`-p`, `--workspace`, `-t`, `-r`, `--lib`, `--bin`, `--bins`, `--examples`, `--tests`, `--benches`, `--all-targets`, `-F`/`--features`, `--all-features`, `--no-default-features`, `-j`/`--jobs`, `--message-format`, `-v`, `-q`) and lint level switches (`-A`/`--allow`, `-W`/`--warn`, `-D`/`--deny`, `--forbid`, `--force-warn`, `--cap-lints`). `fix` additionally accepts `--allow-dirty`, `--allow-staged`, `--allow-no-vcs`, `--broken-code`, `--edition`, and `--edition-idioms`.
 
-| Purpose | Options |
+In source, configure lint levels on items or inline modules with `#[tessera_ui::lint(allow(tessera::redundant_render_slot))]`.
+
+### Error codes (`--explain CODE`)
+
+| Code | Rule |
 | --- | --- |
-| Package and platform | `--package` (`-p`), `--workspace`, `--target` (`-t`), `--release` (`-r`) |
-| Cargo targets | `--lib`, `--bin NAME`, `--bins`, `--examples`, `--tests`, `--benches`, `--all-targets` |
-| Features | `--features` (`-F`), `--all-features`, `--no-default-features` |
-| Execution and output | `--jobs` (`-j`), `--message-format`, `--verbose` (`-v`), `--quiet` (`-q`) |
+| `T0001` | Component called outside a Tessera build context |
+| `T0002` | Tessera-only runtime API (`remember`, `use_context`, `launch`, `key`, `RenderSlot::render`, etc.) called outside a build context |
+| `T0003` | Unresolved call to a potentially Tessera-sensitive target |
+| `T0004` | Invalid `#[tessera_ui::lint(...)]` attribute configuration |
+| `T0005` | Direct use of `tessera_ui::__private` outside generated macro code |
+| `T0006` | `State::new` called outside `ModelInit::init` or a `ModelStore::model` initializer |
+| `T0007` | A single build context may emit more than one `layout()` or `group()` node |
 
-### Lint levels
+### Built-in lints
 
-These two commands are the ones that accept lint switches. Each takes an individual lint such as `tessera::redundant_render_slot`, the `tessera::all` group, or `warnings`. Switches apply in the order you write them.
-
-| Option | Meaning |
-| --- | --- |
-| `--allow LINT`, `-A` | Allow the lint. |
-| `--warn LINT`, `-W` | Warn on the lint. |
-| `--deny LINT`, `-D` | Make the lint an error. |
-| `--forbid LINT` | Make the lint an error that nested settings cannot lower. |
-| `--force-warn LINT` | Warn even when the lint is allowed or capped. Does not accept `warnings`. |
-| `--cap-lints LEVEL` | Cap lint levels at `allow`, `warn`, `deny` or `forbid`. |
-
-`-F` is the short form of `--features`; use `--forbid` for the forbid level. In source, override levels with `#[tessera_ui::lint(allow(tessera::redundant_render_slot))]` on an item or inline module tree. Source attributes accept `allow`, `warn`, `deny` and `forbid`, and nested settings cannot lower a forbidden lint.
-
-### Fix safety
-
-Commit or otherwise save your edits before running `fix`. These options relax its workspace checks or enable compiler migrations:
-
-| Option | Meaning |
-| --- | --- |
-| `--allow-dirty` | Fix even if the working directory has uncommitted changes. |
-| `--allow-staged` | Fix even if there are staged changes. |
-| `--allow-no-vcs` | Fix even if no version control is detected. |
-| `--broken-code` | Fix even if the code already has compiler errors. |
-| `--edition` | Fix in preparation for the next edition. |
-| `--edition-idioms` | Fix warnings to migrate to an edition's idioms. |
-
-## Android
-
-| Command | Purpose |
-| --- | --- |
-| `cargo tessera android init` | Generate the Gradle host project. `--skip-targets-install` skips installing Rust targets. |
-| `cargo tessera android build` | Build an APK or AAB with Gradle. |
-| `cargo tessera android dev` | Build, install and run the app on a device. |
-| `cargo tessera android rust-build TARGET` | Build the Rust library for one Android target. Gradle calls this during the Android build. |
-
-`build`, `dev` and `rust-build` share these options:
-
-| Option | Meaning |
-| --- | --- |
-| `--release`, `-r` | Use the release profile. |
-| `--package NAME`, `-p` | Package to build. |
-| `--profiling-output REMOTE_PATH` | Enable profiling and write JSONL to this path inside the app sandbox on the device. |
-| `--debug-dirty-overlay` | Overlay dirty replay regions with a translucent color. |
-| `--asset-backend embed\|platform` | Override asset delivery. Defaults to `platform`. |
-
-`build` and `dev` also take `--arch`, the CPU architecture, which defaults to the `arch` in `[package.metadata.tessera.android]` or else `arm64`. In addition:
-
-- `build` takes `--format`, `-f`: `apk` or `aab`. It defaults to the configured `format` or else `apk`.
-- `dev` requires `--device`, `-d`, set to a serial from `adb devices`.
-
-## iOS
-
-`cargo tessera ios build` builds and bundles an iOS app. It runs only on macOS with Xcode.
-
-| Option | Meaning |
-| --- | --- |
-| `--release`, `-r` | Use the release profile. |
-| `--package NAME`, `-p` | Package to build. |
-| `--bin NAME` | Executable to bundle. |
-| `--device` | Build a device IPA instead of a simulator app. |
-| `--signing-identity NAME` | Code-signing certificate name. Without it, the bundle is signed ad hoc. |
-| `--provisioning-profile FILE` | Embed this provisioning profile for device installation. |
-| `--profiling-output PATH` | Write frame profiling JSONL to this path inside the app. |
-
-See [Packaging and release](/guide/distribution#ios) for signing and bundle configuration.
-
-## Web
-
-| Command | Options |
-| --- | --- |
-| `cargo tessera web init` | `--package` (`-p`). Adds the browser host files and web entry support. |
-| `cargo tessera web build` | `--package` (`-p`), `--release` (`-r`), `--features` (`-F`), comma-separated. |
-| `cargo tessera web dev` | `--package` (`-p`), `--release` (`-r`), `--port` (default `8000`). |
-
-`web dev` rebuilds and serves `gen/web/` locally. Refresh the browser after each rebuild to load the new build. Release builds need Binaryen 110 or newer. Deployment is covered in [Packaging and release](/guide/distribution#web).
-
-## Headless sessions
-
-`cargo tessera headless` runs a session-based JSONL server over standard input and output, for tests and automation that render offscreen.
-
-| Option | Meaning |
-| --- | --- |
-| `--package NAME`, `-p` | Package to run. Defaults to the workspace root package. |
-| `--release`, `-r` | Build workers with the release profile. |
-| `--width PX` | Default offscreen width in physical pixels. Default `800`. |
-| `--height PX` | Default offscreen height in physical pixels. Default `600`. |
-| `--frame-time-ms MS` | Virtual time step per frame. Default `16`. |
-| `--profiling-output FILE` | Enable profiling and write JSONL records. |
-
-The app must enable the `tessera-ui/headless` feature and keep its shared `EntryPoint::run_desktop()` startup path. A `spawn` request can name a `package` instead of `-p`. [Testing](/guide/testing) documents the protocol and GPU requirements.
-
-## Profiling
-
-`cargo tessera profiling analyze PATH` summarizes a JSONL capture written by `--profiling-output` and ranks components.
-
-| Option | Meaning |
-| --- | --- |
-| `--verbose`, `-v` | Show the full summary and every ranking section. |
-| `--top N` | Entries per section. Default `5`, or `20` with `--verbose`. Must be greater than 0. |
-| `--min-count N` | Minimum samples for a component to be listed. Default `1`. |
-| `--skip-invalid` | Skip non-frame lines that fail to parse. |
-| `--csv FILE` | Export per-component aggregated stats to CSV. |
-
-`cargo tessera profiling analyze-android` pulls a capture from a device with adb, then analyzes it. It takes the same analysis options, plus:
-
-| Option | Meaning |
-| --- | --- |
-| `--package ID` | Required. The Android application ID, such as `com.example.myapp`. |
-| `--device SERIAL`, `-d` | Device from `adb devices`. |
-| `--remote-path REMOTE_PATH` | Path inside the app sandbox. Common locations are tried when omitted. |
-| `--pull-to FILE` | Local copy of the capture. Default `profiles/android.jsonl`. |
-
-```sh
-cargo tessera profiling analyze target/headless.jsonl --top 30
-cargo tessera profiling analyze-android --package com.example.myapp --top 20
-```
-
-How to capture useful profiles and read the results is covered in [Rendering phases and performance](/guide/rendering).
-
-## Agent skill
-
-`cargo tessera skill` installs the bundled `tessera-good-taste` guidance for coding agents. Without a scope it asks in an interactive terminal, so scripts must pass one:
-
-```sh
-cargo tessera skill --local
-cargo tessera skill --global
-```
-
-| Option | Meaning |
-| --- | --- |
-| `--local` | Install into the project's `.agents/skills/`. |
-| `--path DIR` | Project directory for a local install. Defaults to the current directory. Conflicts with `--global`. |
-| `--global` | Install into `~/.agents/skills/`. Conflicts with `--local`. |
-| `--force` | Replace locally modified files that belong to the bundled skill. |
+- **`tessera::redundant_render_slot`**: warns when creating a `RenderSlot` only to immediately forward it through a closure whose sole action is `.render()`.
+- **`tessera::remembered_state_in_model`**: warns when a `ModelStore::model` initializer captures state created by `remember` or `retain` instead of `State::new`.
+- **`tessera::named_modifier_ext_import`**: warns when a private `use` binds `ModifierExt`, `FocusModifierExt`, or `CursorModifierExt` to a name never referenced directly (`cargo tessera fix` rewrites it to `as _`).

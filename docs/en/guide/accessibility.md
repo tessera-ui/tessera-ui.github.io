@@ -1,72 +1,45 @@
 ---
-title: Accessibility
-description: Make your app usable with screen readers and the keyboard by choosing the right controls, naming them well and checking the result.
+title: Semantics and accessibility
+description: Describe custom UI with SemanticsArgs, build accessible controls and focus order, and inspect the published tree.
 ---
 
-# Accessibility
+# Semantics and accessibility
 
-Tessera publishes an accessibility tree next to the visual UI, and screen readers, keyboard navigation and your tests all work from it. Most of the effort goes into choosing controls that already publish the right information, giving them clear names and keeping focus where people expect it. This page is about those practices; [Semantics](/guide/semantics) documents the API that describes nodes in the tree.
+Tessera publishes a semantic tree alongside the visual UI for screen readers, keyboard navigation, and automated tests. Built-in controls and interactive modifiers publish their own roles, names, and actions; you step in to label icon-only controls, group composite widgets cleanly, or describe custom elements.
 
-A text field is a good place to start: its visible label becomes its accessible name, and you can add a description for anything the label doesn't say.
+## Prefer standard controls and labels
 
-```rust
-use tessera_components::text_field::text_field;
-use tessera_ui::tessera;
+Whenever an existing control fits, use it—`text_field`, `checkbox`, `radio_group`, and `button` already wire roles, keyboard navigation, and accessibility actions together.
 
-#[tessera]
-fn account_name() {
-    text_field()
-        .label("Account name")
-        .accessibility_description("Used to identify your account to other members");
-}
-```
-
-Material controls need a `material_theme()` ancestor, as described in [Material 3 theming](/guide/theming).
-
-## Start with existing controls
-
-When a control from the component library fits, use it. A text field already connects editing, focus, selection and accessibility, so using it gives you all of them together; a version built from painted text and a pointer handler has to recreate each connection by hand.
-
-Composite controls carry keyboard behavior too. A radio group publishes the group and its options, and it behaves as a single Tab stop whose options you move between with the arrow keys:
+- Provide `accessibility_label` on icon-only controls (`icon_button`, image buttons) and fields whose visual content is not self-explanatory; omit the role word ("Search messages", not "Search messages button").
+- Add `accessibility_description` for extra instructions without cluttering the name.
+- Always set `.label(...)` on `text_field`, even when using `.placeholder(...)`.
+- Resolve accessibility strings from the same localization catalog as visible UI copy.
 
 ```rust
-use tessera_components::radio_button::{radio_button, radio_group};
+use tessera_components::{
+    icon_button::icon_button,
+    material_icons::filled,
+    radio_button::{radio_button, radio_group},
+};
 use tessera_ui::{remember, tessera};
 
 #[tessera]
-fn sort_order() {
+fn sort_controls() {
     let selected = remember(|| 0usize);
     radio_group()
         .accessibility_label("Sort by")
         .content(move |group| {
-            radio_button()
+            radio_button(selected.get() == 0)
                 .group(group)
-                .selected(selected.get() == 0)
                 .accessibility_label("Newest first")
                 .on_select(move |_| selected.set(0));
-            radio_button()
+            radio_button(selected.get() == 1)
                 .group(group)
-                .selected(selected.get() == 1)
                 .accessibility_label("Oldest first")
                 .on_select(move |_| selected.set(1));
         });
-}
-```
 
-If you need a custom look but ordinary activation behavior, build it with `clickable_with`, `toggleable_with` or `selectable_with`. These modifiers connect one action to pointer input, keyboard input and assistive technology at once. See [Gestures and interaction](/guide/interaction).
-
-## Give every control a name
-
-A name says what a control is for: "Search messages", not "Magnifying glass". A description adds what the name leaves out, such as an input requirement or the consequence of an action. Leave the role out of the name, since the screen reader announces the role separately; "Search messages, button" reads better than "Search messages button, button".
-
-Icon-only controls have no visible text to borrow a name from, so give them one with `accessibility_label`:
-
-```rust
-use tessera_components::{icon_button::icon_button, material_icons::filled};
-use tessera_ui::tessera;
-
-#[tessera]
-fn search_action() {
     icon_button()
         .icon(filled::SEARCH_SVG)
         .accessibility_label("Search messages")
@@ -74,28 +47,74 @@ fn search_action() {
 }
 ```
 
-Use a control's `accessibility_label` whenever its visible content isn't a suitable name. Where a control offers `accessibility_description`, it adds explanatory text without changing the name. Give text fields a label even when they show a placeholder, because the placeholder disappears as soon as the user types.
+## Describing custom subtrees with `semantics`
 
-Text you place inside a button is published as a text node of its own, beneath the button. To give the button node itself a name, set `accessibility_label` on it.
+Attach `Modifier::new().semantics(SemanticsArgs { .. })` (from `tessera_foundation::modifier`) when a custom subtree needs an explicit role, label, value, or `test_tag` (types come from `tessera_ui::accesskit`).
 
-Names and descriptions are user-facing text. Resolve them next to the control from the same catalog as its visible text, so they change language together; see [Localization](/guide/i18n).
+Only nodes with semantic metadata appear in the published tree—plain layout containers are flattened away, and only placed nodes are published.
 
-## Describe custom controls honestly
+### Keeping vs. hiding descendants (`merge_descendants`)
 
-When a custom subtree needs metadata that no existing control publishes, attach it with the semantics modifier. [Semantics](/guide/semantics) lists the fields; a few habits keep the result truthful:
+With `SemanticsArgs::default()`, `merge_descendants` is `false`, meaning the parent node's description replaces its descendants:
 
-- Choose the role for what the element does, not for how it looks.
-- Checked and selected are different states. The selectable interaction modifier, for example, publishes checked state for `Role::RadioButton` and selected state for other selectable roles. Derive the published state from the same application state that drives the appearance, so the two always agree.
-- Publishing `disabled` only sets metadata; make your input handlers and actions leave state unchanged as well. The interaction modifiers' `enabled` setting does both.
-- Semantics advertise actions; your code implements them. Advertise only what the control actually handles, and get ordinary click and toggle from an existing control or an interaction modifier.
-- Marking content `hidden` removes it from the accessibility tree, but it is still drawn and still receives pointer and keyboard input. Keep focus out of content that assistive technology cannot reach.
-- Be careful when you put semantics on a container of controls. With `SemanticsArgs::default()`, `merge_descendants` is `false` and the children are no longer exposed individually. A named group of independently operable controls needs `merge_descendants: true`.
+```rust
+use tessera_components::{row::row, text::text};
+use tessera_foundation::modifier::{ModifierExt as _, SemanticsArgs};
+use tessera_ui::{Modifier, accesskit::Role, tessera};
 
-## Keep focus and reading order predictable
+#[tessera]
+fn rating(stars: u8) {
+    row()
+        .modifier(Modifier::new().semantics(SemanticsArgs {
+            role: Some(Role::Image),
+            label: Some(format!("Rated {stars} out of 5")),
+            test_tag: Some("rating".into()),
+            ..Default::default()
+        }))
+        .children(move || {
+            for index in 0..5 {
+                text(if index < stars { "★" } else { "☆" });
+            }
+        });
+}
+```
 
-Both keyboard traversal and the accessibility tree follow the order in which layouts place their children, not their final screen coordinates. For rows, columns and the other standard layouts that is the visual order, so the simplest way to get a sensible reading order is to declare content in the order you want it read.
+When labeling a container whose child controls must remain individually interactive (such as a toolbar), set `merge_descendants: true` (or use `clear_and_set_semantics(args)` when explicitly replacing all child semantics):
 
-A toolbar or another composite widget usually works best as one Tab stop with arrow-key movement inside it, like the radio group above. A focus group with a traversal policy gives you that for your own containers:
+```rust
+use tessera_components::{button::button, row::row, text::text};
+use tessera_foundation::modifier::{ModifierExt as _, SemanticsArgs};
+use tessera_ui::{Callback, Modifier, accesskit::Role, tessera};
+
+#[tessera]
+fn text_style_toolbar(on_bold: Callback, on_italic: Callback) {
+    row()
+        .modifier(Modifier::new().semantics(SemanticsArgs {
+            role: Some(Role::Toolbar),
+            label: Some("Text style".into()),
+            merge_descendants: true,
+            ..Default::default()
+        }))
+        .children(move || {
+            button().on_click_shared(on_bold).child(|| text("Bold"));
+            button().on_click_shared(on_italic).child(|| text("Italic"));
+        });
+}
+```
+
+::: warning Keep semantics truthful
+- Match `toggled` vs. `selected` to the control's role (`toggleable` sets `toggled`; `selectable` sets `selected`, or `toggled` for `Role::RadioButton`).
+- `disabled: true` only sets metadata—use interaction modifier `enabled` flags or gate handlers so disabled controls do not mutate state.
+- `hidden: true` hides a node from assistive technology while still rendering and accepting input; keep focus out of hidden nodes.
+:::
+
+For low-level custom controls that handle AccessKit actions directly, implement `tessera_ui::SemanticsModifierNode`.
+
+## Focus order and restoration
+
+Keyboard traversal and reading order follow child declaration/placement order, so declare UI in the order it should be read.
+
+- For toolbars and grouped controls, make the container one Tab stop with arrow-key movement inside:
 
 ```rust
 use tessera_components::{icon_button::icon_button, material_icons::filled, row::row};
@@ -104,7 +123,7 @@ use tessera_ui::{FocusTraversalPolicy, Modifier, modifier::FocusModifierExt as _
 #[tessera]
 fn formatting_toolbar() {
     row()
-        .modifier(Modifier::new().focus_group().focus_traversal_policy(
+        .modifier(Modifier::new().focus_group(None).focus_traversal_policy(
             FocusTraversalPolicy::horizontal().single_tab_stop(true),
         ))
         .children(|| {
@@ -120,26 +139,10 @@ fn formatting_toolbar() {
 }
 ```
 
-When temporary UI such as a dialog or menu closes, return focus to where the user was. Save the focused target before you show it, and restore it while the temporary UI still holds focus, so a place the user has moved to in the meantime keeps its focus. Restoring does nothing if the target has been removed or disabled in the meantime:
+- Before opening a temporary overlay (dialog, menu), save the active target with `tessera_ui::focus::save_focus()`, and call `target.restore()` when closing while the overlay still holds focus.
 
-```rust
-use tessera_ui::FocusManager;
+## Platform support and testing
 
-let restore_to = FocusManager::current().save_focus();
-// Show the dialog. When it closes:
-if let Some(target) = restore_to {
-    target.restore();
-}
-```
+AccessKit adapters are active on Windows, macOS, Linux, and iOS. Android and web do not currently expose native AccessKit adapters, though the published tree is still built and testable everywhere.
 
-Keep a visible focus indicator on custom controls; `FocusRequester::is_focus_visible` tells you when keyboard focus should be drawn. The `focusable` and `focused` semantic fields only describe focus; to register or move keyboard focus, use the focus modifiers, requesters and the focus manager described in [Gestures and interaction](/guide/interaction).
-
-## Platform support
-
-The application renderer connects AccessKit adapters on Windows, macOS, Linux and iOS. Android and web have no active adapter in Tessera, so on those targets the published semantics do not by themselves give screen-reader users native access.
-
-## Check your app
-
-Try the app with each target platform's screen reader and with the keyboard alone. Confirm that names and values are announced, activation works, checked and selected states are right, disabled controls do nothing, the reading order makes sense and focus comes back after dialogs close.
-
-Automated tests read the same tree. They can find a node by label and role, fire accessibility actions on it and check the reading order, all in a windowless test; see [Testing](/guide/testing).
+Use `UiTest` to verify published labels, roles, reading order, and accessibility actions without a window—see [Testing and headless automation](/guide/testing).

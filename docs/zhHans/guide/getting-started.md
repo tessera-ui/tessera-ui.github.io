@@ -1,31 +1,33 @@
 ---
 title: 快速开始
-description: 安装 Tessera CLI，创建项目，并在桌面、浏览器或手机上运行。
+description: 安装 cargo-tessera，创建新项目，并在桌面、浏览器或手机上运行起来。
 ---
 
 # 快速开始
 
-只需几条命令，你就能在桌面上运行一个 Tessera 应用，并且每次保存文件它都会自动重新构建。之后，同一个项目还可以运行在浏览器或手机上。
+三条命令就能在桌面上打开一个 Tessera 窗口。项目建好后，同一份代码也可以直接跑到浏览器和手机上。
 
-## 安装工具
+## 准备环境
 
-Tessera 需要 Rust 1.98 或更新版本，这是 `cargo-tessera` 声明的最低编译器版本；此外还需要当前操作系统的原生链接器和构建工具。每增加一个目标平台，还有各自的要求：
+Tessera 需要 **Rust 1.98 或更高版本**（`cargo-tessera` 声明的最低版本），以及当前系统的原生链接器和构建工具。如果要跑其他平台，还需要对应的环境：
 
-- **Web：** 支持 WebGPU 的浏览器。发布构建还需要 Binaryen 110 或更新版本，并且 `wasm-opt` 位于 `PATH` 中。
-- **Android：** Android SDK 和 NDK、生成的 Gradle 项目所需的 Java，以及一台设备或模拟器。
-- **iOS：** 装有 Xcode 的 macOS。
+- **Web**：支持 WebGPU 的浏览器；打发布包还需要 Binaryen 110+，且 `wasm-opt` 在 `PATH` 中。
+- **Android**：Android SDK 与 NDK、Gradle 所需的 JDK，以及真机或模拟器。
+- **iOS**：装有 Xcode 的 macOS。
 
-各平台的详细要求见[平台概览](/zhHans/guide/platforms)。装好 Rust 之后，安装 CLI：
+各系统具体的系统库依赖（如 Linux 下的窗口和键盘库）见[目标平台](/zhHans/guide/platforms)。
+
+先用 Cargo 安装命令行工具：
 
 ```sh
-cargo install cargo-tessera
+cargo install cargo-tessera --locked
 ```
 
-CLI 以 Cargo 子命令的形式运行，所以本页的命令都以 `cargo tessera` 开头。
+`cargo-tessera` 作为 Cargo 子命令工作，后面所有操作都以 `cargo tessera` 开头。
 
-## 创建项目
+## 创建并运行项目
 
-用 `basic` 模板创建应用并启动：
+用 `basic` 模板建一个新应用，并启动桌面热重启开发循环：
 
 ```sh
 cargo tessera new my-app --template basic
@@ -33,64 +35,68 @@ cd my-app
 cargo tessera dev
 ```
 
-随后会打开一个窗口，铺满窗口的 surface 上显示着 `Hello Tessera!`。另一个模板 `blank` 生成的项目与它相同，只是 surface 里是空的。两个模板都包含 `tessera-components`，都注册了 `ComponentsPackage`，并用 Material 主题包裹根组件。运行 `new` 时不带 `--template`，CLI 会让你选择模板；不带项目名，它也会提示你输入。
+很快就会弹出一个窗口，铺满窗口的背景上写着 `Hello Tessera!`。另一个 `blank` 模板结构完全相同，只是画面里面是空的。两个模板都已经配好了 `tessera-ui`、`tessera-foundation` 和 `tessera-components`，注册了 `ComponentsPackage`，并在根组件外包了一层 `material_theme()`。不写项目名或 `--template` 时，CLI 会交互式让你选。
 
-除非另有说明，这些指南中的示例都假定你使用 `basic` 模板。大部分时间你只会修改 `src/app.rs`，其余生成文件的作用见[项目结构](/zhHans/guide/project-structure)。
+除非特别说明，整本手册的例子都默认基于 `basic` 模板，你写界面时主要改 `src/app.rs`。项目里其他文件的作用见[项目结构](/zhHans/guide/project-structure)。
 
-## 修改并重新运行
+## 修改代码并自动重跑
 
-`cargo tessera dev` 会监视 `src/`、`Cargo.toml`、`build.rs`、`tessera-app.toml`、`tessera-config.toml`、应用图标和资源目录。其中任何一个发生变化，它都会重新构建并重启应用。
+`cargo tessera dev` 会盯着 `src/`、`Cargo.toml`、`build.rs`、`tessera-app.toml`、`tessera-config.toml`、应用图标和资源目录。只要其中任何一个改动，它就会重新做边界检查、编译并重启桌面窗口。
 
-每次改动都会重启进程，所以应用会回到初始状态，从初始界面重新开始。如果构建失败，修复错误后再次保存即可，`dev` 会接着处理下一次修改。
+每次重启都是新进程，所以运行时内存里的状态会回到初始值。要是改出了编译错误或检查报错，修好再保存就行，`dev` 会留在后台等你的下一次保存。
 
-不妨试一试：把 `src/app.rs` 替换为[介绍](/zhHans/guide/)中的计数器，然后保存。
+现在就可以把 `src/app.rs` 换成[介绍](/zhHans/guide/)里的计数器代码，保存文件看看窗口变化。
 
-## 在浏览器中运行
+## 在其他平台上跑起来
 
-先添加一次 WebAssembly 目标，再启动 Web 开发服务器：
+### 浏览器（WebGPU）
+
+先添加一次 `wasm32-unknown-unknown` 目标，再启动本地 Web 开发服务：
 
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo tessera web dev
 ```
 
-这条命令会构建项目，在 `http://127.0.0.1:8000` 上提供服务，并尝试用默认浏览器打开这个地址。它会持续监视并重新构建；每次重新构建后，手动刷新页面即可加载新版本。用 `--port 8080` 可以换一个端口。
+命令会编译 WebAssembly，在 `http://127.0.0.1:8000` 启动静态服务并尝试打开默认浏览器。它同样会监听源码变化并自动重编，编完手动刷新页面就能看到新界面。想换端口就加 `--port 8080`。新项目默认带有 `gen/web/index.html`；如果是给老项目补 Web 支持，先跑一遍 `cargo tessera web init`。
 
-新项目已经在 `gen/web/` 中包含了浏览器宿主页面。给缺少该页面的旧项目添加 Web 支持时，先运行 `cargo tessera web init`。浏览器中运行的是编译成 WebAssembly 的同一份组件代码；浏览器要求和字体加载见[平台概览](/zhHans/guide/platforms)。
+### Android
 
-## 在 Android 上运行
-
-装好 Android SDK 和 NDK 后，先生成一次 Android 项目，然后在设备上运行：
+配好 Android SDK、NDK 和 Java 后，先初始化一次 Gradle 宿主，再推到设备上跑：
 
 ```sh
 cargo tessera android init
 cargo tessera android dev --device DEVICE_ID
 ```
 
-`android init` 还会安装 Rust 的 Android 目标，传入 `--skip-targets-install` 可以跳过这一步。设备标识使用 `adb devices` 列出的值。和桌面命令一样，`android dev` 会持续监视：源码变化时，它会重新构建应用、重新安装到设备上并重启。
+`android init` 会顺便装好 Rust 的 Android 编译目标（加 `--skip-targets-install` 可跳过）。`DEVICE_ID` 就是 `adb devices` 输出的设备编号。`android dev` 也会监听改动，保存后自动重编、重新安装并拉起应用。
 
-## 为 iOS 构建
+### iOS
 
-在装有 Xcode 的 macOS 上，为 iOS 模拟器构建应用：
+在装了 Xcode 的 macOS 上，可以构建 iOS 模拟器用的 `.app`：
 
 ```sh
 cargo tessera ios build
 ```
 
-这条命令构建一次应用包就退出；它不像 `dev` 那样监视源码并运行应用。加上 `--device` 则改为面向真机构建 IPA。签名方式和应用包的输出位置见[打包发布](/zhHans/guide/distribution)。
+注意它不是监听模式，编完一次包就退出；加 `--device` 可以打出真机用的 IPA。签名和 bundle 配置见[打包与发布](/zhHans/guide/distribution#ios)。
 
-## 检查项目
+## 静态检查与自动修复
 
-提交代码之前，运行检查器：
+提交代码前，习惯性跑一遍检查：
 
 ```sh
 cargo tessera check
 ```
 
-它先检查 Tessera 的调用边界，再检查编译。边界规则很简单：在另一个组件或可识别的构建闭包中调用组件。`on_click` 这类普通事件回调运行在构建之外，它们修改状态，由下一次构建呈现结果。原因见 [Tessera 的思维方式](/zhHans/guide/thinking-in-tessera)。`cargo tessera fix` 会应用编译器和 Tessera 给出的可自动应用的修复建议，然后再检查一遍。
+它会先做 Tessera 的调用边界与所有权检查（比如拦住你在按钮回调里误调用组件或 `remember`），再跑 `cargo check`。这些规则背后的原因见[Tessera 的思维方式](/zhHans/guide/thinking-in-tessera#调用边界与静态检查)。如果想让工具把可自动修复的建议直接改好，执行：
 
-在工作区中，用 `-p my-app` 选择应用。lint 设置、性能分析和其他命令见[命令行参考](/zhHans/guide/cli)。
+```sh
+cargo tessera fix
+```
+
+在多包工作区里，用 `-p my-app` 指定要检查的包。如果你用编程 Agent 写代码，还可以执行 `cargo tessera skill --local` 或 `--global`，把官方的 `tessera-good-taste` 开发指引装进工作目录或主目录。
 
 ## 下一步
 
-[教程](/zhHans/guide/tutorial)会从这个项目出发，一次一处改动，做出一个小应用。如果你想先了解生成的文件，请阅读[项目结构](/zhHans/guide/project-structure)。
+想直接动手写点东西，打开[教程：购物清单](/zhHans/guide/tutorial)，从这个模板一步步做出一个完整的小应用；想先摸清脚手架里每个文件的用途，去看[项目结构](/zhHans/guide/project-structure)。

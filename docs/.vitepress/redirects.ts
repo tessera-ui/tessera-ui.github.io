@@ -36,6 +36,7 @@ export async function writeLegacyRedirects(outDir: string) {
       ["guide/component.html", "guide/thinking-in-tessera"],
       ["guide/plugin.html", "guide/plugins"],
       ["guide/shard.html", "guide/navigation"],
+      ["guide/semantics.html", "guide/accessibility"],
       ["about/index.html", "guide/"],
       ["about.html", "guide/"],
       ["components/index.html", "guide/theming"],

@@ -1,17 +1,17 @@
 ---
 title: Text and text input
-description: Show text in the theme's type scale and accept text from users with text fields.
+description: Display text with Material typography roles and collect user input with text_field and TextInputController.
 ---
 
 # Text and text input
 
-Text is how most of your UI talks to the user, so Tessera gives you one component for showing it and a Material text field for collecting it. Both read their fonts and colors from the theme, which keeps every label on a screen consistent.
+`text()` renders styled strings, and `text_field()` provides Material text editing with selection, caret handling, IME composition, and clipboard integration. Both inherit their default typography and colors from `MaterialTheme`.
 
-The examples on this page run beneath the app's `material_theme()`; [Material 3 theming](/guide/theming) shows the root setup.
+Examples below assume `material_theme()` above them and `ComponentsPackage` registered at startup.
 
-## Show text
+## Displaying text
 
-`text()` draws a string with one uniform style. Pick a role from the theme's typography scale, so headings and body copy stay in proportion when the theme changes:
+Pick a role from `theme.typography` so headings, labels, and body copy scale coherently with the theme:
 
 ```rust
 use tessera_components::{column::column, text::text, theme::MaterialTheme};
@@ -31,11 +31,11 @@ fn article_header() {
 }
 ```
 
-When you leave `style` unset, `text` uses a `TextStyle` inherited from its parent if there is one (a button provides one for its label, for example), and otherwise the theme's `body_large`. Color resolves the same way: an explicit `color`, then the inherited `ContentColor`, then the theme's `on_surface`. That is why text inside a button or a filled surface usually picks up the right color on its own.
+When `style` is omitted, `text` uses any `TextStyle` provided in context (such as a button label style) or falls back to `theme.typography.body_large`. Color follows the same precedence: explicit `.color(...)`, inherited `ContentColor`, then `theme.color_scheme.on_surface`.
 
-## Style text
+## Styling and wrapping
 
-The typography scale has display, headline, title, body and label roles, each in large, medium and small sizes. A `TextStyle` holds the font size, an optional line height, the weight, letter spacing and an optional font family. When one piece of content needs to differ from its role, start from the role and change only what is different:
+`MaterialTypography` includes `display`, `headline`, `title`, `body`, and `label` in `large`, `medium`, and `small` sizes (plus `.emphasized()`). To tweak one property without losing the role's scale, copy from the theme role:
 
 ```rust
 use tessera_components::{
@@ -58,15 +58,15 @@ fn report_title() {
 }
 ```
 
-`single_line(true)` keeps the text on one line and ellipsizes whatever does not fit. Without it, text wraps to the width its parent allows. If a line height is not given, it defaults to 1.2 times the font size. `text` also has `size` and `line_height` setters for one-off overrides.
+- `single_line(true)` keeps text on one line and truncates overflow with an ellipsis; by default, text wraps within the parent's width constraint.
+- `line_height` defaults to `1.2 × font_size` when omitted; use `.size(...)` and `.line_height(...)` for one-off overrides.
+- `accessibility_label` and `accessibility_description` override the spoken label when it should differ from the visible string.
 
-If many components should share a change, change the theme's typography once; `theme.typography.emphasized()` gives you a stronger scale for emphasized content. `text` draws a single style, so a sentence with mixed weights or colors needs several `text` calls laid out together. Registering fonts and controlling fallback belongs to [Resources](/guide/assets).
+For registering custom fonts and Unicode fallback ranges, see [Assets, images, and fonts](/guide/assets).
 
-Text is also exposed to accessibility: by default its label is the displayed content and its role is a label. Use `accessibility_label` or `accessibility_description` when the spoken name should differ from the visible text. [Semantics](/guide/semantics) explains how that metadata is used.
+## Text fields
 
-## Accept text input
-
-`text_field()` is the Material text field. It handles editing, selection, the caret, the input method and the clipboard for you. Its builder gives you labels, placeholders and a few presets:
+`text_field()` starts filled and single-line by default, and supports outlined, secure, and multi-line presets:
 
 ```rust
 use tessera_components::{
@@ -88,13 +88,11 @@ fn sign_in_form() {
 }
 ```
 
-Fields are filled and single-line by default. `outlined()` switches to the outlined style, and `TextFieldLineLimit::MultiLine` allows several lines. Leading and trailing icons, prefixes, suffixes and error state are further setters; the [text field reference](https://tessera-ui.github.io/tessera/tessera_components/text_field/index.html) lists them all.
+Set `.read_only(true)` to allow selection and copying without edits, or `.enabled(false)` to disable interaction completely. Use `.on_submit(...)` for single-line Enter submission.
 
-`read_only` and `enabled` express different policies. A read-only field keeps its content available but accepts no edits, while a disabled field accepts no user input at all. `on_submit` handles submission of a single-line field.
+## Filtering and observing edits
 
-## Respond to changes
-
-`on_change` receives the proposed `String` and **returns the accepted `String`**, not `()`. That return value is what the field keeps, so return it even when your callback only records it:
+`on_change` receives the proposed `String` and returns the accepted `String` that the field retains—always return the string even when you only store it:
 
 ```rust
 let query = remember(String::new);
@@ -104,7 +102,7 @@ text_field().label("Search").on_change(move |value: String| {
 });
 ```
 
-Editing rules belong in `input_transform`, which runs before `on_change`. This field keeps only the digits of each proposed value:
+Use `input_transform` for editing rules such as character filtering; it runs before `on_change`:
 
 ```rust
 text_field()
@@ -112,15 +110,16 @@ text_field()
     .input_transform(|value: String| value.chars().filter(char::is_ascii_digit).collect());
 ```
 
-Keep these rules in `input_transform`. The component body runs on every rebuild, so it is the wrong place to edit what the user typed.
+## Controlling text from code
 
-## Control the text from code
-
-`text_field()` creates and owns an editor controller unless you supply one. Keep your own `TextInputController` when application actions need to read or replace the text, or move focus to the editor:
+Pass a remembered `TextInputController` when actions outside the field need to read, replace, or focus the text buffer:
 
 ```rust
 use tessera_components::{
-    button::button, column::column, text::text, text_field::text_field,
+    button::button,
+    column::column,
+    text::text,
+    text_field::text_field,
     text_input::TextInputController,
 };
 use tessera_ui::{Dp, remember, tessera};
@@ -140,18 +139,15 @@ fn search_field() {
 }
 ```
 
-Read the current content with `editor.with(|editor| editor.text())`. `initial_text` seeds the internally owned controller once, when it is created; later rebuilds leave the current text in place. If you supply an external controller, initialize it directly.
+Use `initial_text` only when letting `text_field()` manage its own internal controller; when passing an external controller, initialize it directly.
 
-## Input methods and the clipboard
+## IME, context menus, and clipboard
 
-The editor already handles selection, IME preedit and committed text, caret positioning and clipboard editing. Build on it instead of assembling text from key presses: a key press is not necessarily a character, and an input method may revise a composition the user has not finished.
+`TextFieldContextMenu` configures cut, copy, paste, and select-all entries; `.secure()` automatically selects `TextFieldContextMenu::secure_default()` (which omits cut and copy).
 
-`TextFieldContextMenu` configures the field's cut, copy, paste and select-all menu. `secure()` obscures what is displayed, keeps the field on one line and switches to a context-menu policy without cut or copy.
+When building a custom editor on lower-level primitives (`ImeInput`, `ImeSession`, `ImeRequest`, and `ClipboardInput`):
 
-::: warning
-Protect sensitive data in your application as well. These settings only change what the field displays and what its menu offers.
-:::
+- Handle text composition through `ImeInput` rather than inferring characters from key presses.
+- Verify asynchronous edits against the current buffer and selection before applying them, and use `ClipboardInput::write_text` for cut so text is deleted only after the platform confirms the clipboard write succeeded.
 
-When you apply an asynchronous editing result, first check that it still refers to the current content and selection. A cut, for example, deletes the text once the clipboard write has succeeded. The focused clipboard input path supports this through `ClipboardInput::write_text`, whose completion callback runs only after the platform acknowledges success. Keep normal text editing on the existing controller and input pipeline.
-
-A fully custom editor receives composition through `ImeInput` and publishes its text, selection and input configuration through `ImeSession` and `ImeRequest`. Alongside its keyboard handler, it also needs keyboard focus, clipboard handling and accessibility semantics. [Gestures and interaction](/guide/interaction) describes the raw input traits, and the [text input reference](https://tessera-ui.github.io/tessera/tessera_components/text_input/index.html) documents the editor contracts.
+See [Gestures, input, and focus](/guide/interaction) for raw input extension traits.

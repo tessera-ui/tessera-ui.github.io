@@ -1,31 +1,33 @@
 ---
 title: Getting started
-description: Install the Tessera CLI, create a project, and run it on desktop, in a browser or on a phone.
+description: Install cargo-tessera, create a project, and run it on desktop, web, or mobile.
 ---
 
 # Getting started
 
-In a few commands you can have a Tessera application running on your desktop, rebuilding itself each time you save a file. From there, the same project runs in a browser or on a phone.
+You can go from an empty directory to a running desktop window in three commands. Once the project is set up, the same code also runs in a browser or on mobile.
 
-## Install the tools
+## Prerequisites
 
-Tessera needs Rust 1.98 or newer, which is the minimum compiler version `cargo-tessera` declares, along with the native linker and build tools for your operating system. Each extra target adds its own requirements:
+Tessera requires **Rust 1.98 or newer** (the minimum supported version of `cargo-tessera`) along with your OS native C/C++ linker and build tools. Additional targets bring their own requirements:
 
-- **Web:** a browser with WebGPU. Release builds also need Binaryen 110 or newer, with `wasm-opt` on `PATH`.
-- **Android:** the Android SDK and NDK, Java for the generated Gradle project, and a device or emulator.
-- **iOS:** macOS with Xcode.
+- **Web**: a browser with WebGPU enabled. Release builds also need Binaryen 110 or newer with `wasm-opt` on your `PATH`.
+- **Android**: Android SDK and NDK, a JDK for Gradle, and a device or emulator.
+- **iOS**: macOS with Xcode installed.
 
-[Platforms](/guide/platforms) lists the details for each one. With Rust installed, install the CLI:
+For exact per-OS dependencies (such as Linux display libraries), see [Platforms](/guide/platforms).
+
+Install the CLI once with Cargo:
 
 ```sh
-cargo install cargo-tessera
+cargo install cargo-tessera --locked
 ```
 
-The CLI runs as a Cargo subcommand, so every command on this page starts with `cargo tessera`.
+Because `cargo-tessera` installs as a Cargo subcommand, every command in this guide starts with `cargo tessera`.
 
-## Create a project
+## Create and run a project
 
-Create an application from the `basic` template and start it:
+Scaffold a new project from the `basic` template and start the desktop dev loop:
 
 ```sh
 cargo tessera new my-app --template basic
@@ -33,64 +35,68 @@ cd my-app
 cargo tessera dev
 ```
 
-A window opens with `Hello Tessera!` on a full-window surface. The other template, `blank`, is the same project with an empty surface. Both include `tessera-components`, register `ComponentsPackage`, and wrap the root in a Material theme. Run `new` without `--template` and the CLI asks you to pick one; run it without a project name and it asks for that too.
+A window opens showing `Hello Tessera!` on a full-window surface. The `blank` template generates the same structure with an empty surface. Both templates depend on `tessera-ui`, `tessera-foundation`, and `tessera-components`, register `ComponentsPackage`, and wrap the root UI in `material_theme()`. If you omit `--template` or the project name, the CLI prompts interactively.
 
-Unless a page says otherwise, the examples in these guides assume the `basic` template. You will edit `src/app.rs` most of the time; [Project structure](/guide/project-structure) explains the rest of the generated files.
+Unless noted otherwise, examples across this documentation assume the `basic` template, where your UI code starts in `src/app.rs`. See [Project structure](/guide/project-structure) for a tour of the generated files.
 
-## Edit and rerun
+## Edit and reload
 
-`cargo tessera dev` watches `src/`, `Cargo.toml`, `build.rs`, `tessera-app.toml`, `tessera-config.toml`, the application icon and the resource directories. Whenever one of them changes, it rebuilds the application and restarts it.
+`cargo tessera dev` watches `src/`, `Cargo.toml`, `build.rs`, `tessera-app.toml`, `tessera-config.toml`, your icon, and configured resource directories. Whenever a watched file changes, it checks Tessera rules, rebuilds, and restarts the desktop window.
 
-Each change restarts the process, so the application starts again from its initial state and initial screen after every edit. If a build fails, fix the error and save again, and `dev` picks up the next change.
+Each reload starts a fresh process, so in-memory state resets to its initial values. If a build fails, fix the compiler or checker error and save again—`dev` stays running and picks up the next save.
 
-To try it, replace `src/app.rs` with the counter from the [Introduction](/guide/) and save.
+Try replacing `src/app.rs` with the counter from the [Introduction](/guide/) and saving the file to see it update.
 
-## Run in a browser
+## Run on other targets
 
-Add the WebAssembly target once, then start the web development server:
+### Browser (WebGPU)
+
+Add the WebAssembly target once, then start the local dev server:
 
 ```sh
 rustup target add wasm32-unknown-unknown
 cargo tessera web dev
 ```
 
-The command builds the project, serves it at `http://127.0.0.1:8000` and tries to open that address in your default browser. It keeps watching and rebuilding; refresh the page yourself after each rebuild to load the new version. Pass `--port 8080` to use another port.
+This builds the app, serves `gen/web/` at `http://127.0.0.1:8000`, and opens your browser. After saving edits and waiting for a rebuild, refresh the tab to load the updated bundle. Pass `--port 8080` to use another port. New projects already ship with `gen/web/index.html`; for an older project, run `cargo tessera web init` first.
 
-New projects already contain the browser host page in `gen/web/`. To add web support to an older project that lacks this page, run `cargo tessera web init` first. The browser runs the same component code compiled to WebAssembly; [Platforms](/guide/platforms) covers browser requirements and font loading.
+### Android
 
-## Run on Android
-
-With the Android SDK and NDK installed, generate the Android project once and then run on a device:
+With the Android SDK, NDK, and Java configured, generate the Gradle host once and launch on a connected device:
 
 ```sh
 cargo tessera android init
 cargo tessera android dev --device DEVICE_ID
 ```
 
-`android init` also installs the Rust Android targets; pass `--skip-targets-install` to skip that step. Use the device identifier that `adb devices` reports. Like the desktop command, `android dev` keeps watching: when your sources change it rebuilds the application, installs it on the device again and restarts it.
+`android init` also installs the Rust Android targets unless you pass `--skip-targets-install`. Find `DEVICE_ID` from `adb devices`. Like desktop `dev`, `android dev` watches your sources, rebuilds, reinstalls, and relaunches the app on save.
 
-## Build for iOS
+### iOS
 
-On macOS with Xcode, build the application for the iOS simulator:
+On macOS with Xcode installed, build an iOS simulator `.app` bundle:
 
 ```sh
 cargo tessera ios build
 ```
 
-This builds an application bundle once and exits; unlike `dev`, it does not watch your sources or run the app. Add `--device` to build an IPA for a physical device instead. [Packaging and release](/guide/distribution) covers signing and where the bundle is written.
+Unlike `dev`, `ios build` builds once and exits. Pass `--device` to produce an IPA for physical hardware. See [Packaging and release](/guide/distribution#ios) for signing and bundle options.
 
-## Check the project
+## Check rules and apply fixes
 
-Before you commit, run the checker:
+Before committing changes, run the Tessera checker:
 
 ```sh
 cargo tessera check
 ```
 
-It checks Tessera call boundaries first and compilation second. The boundary rule is short: call a component from another component or from a recognized build closure. Ordinary event callbacks such as `on_click` run outside the build, so they change state and the next build shows the result. [Thinking in Tessera](/guide/thinking-in-tessera) explains why. `cargo tessera fix` applies the compiler's and Tessera's machine-applicable suggestions and then checks again.
+It validates Tessera-specific rules first—for instance, catching component or `remember` calls placed inside plain callbacks—and then runs `cargo check`. See [Thinking in Tessera](/guide/thinking-in-tessera#call-boundaries-and-static-checks) for why those boundaries exist. To apply machine-applicable suggestions from both `cargo-tessera` and `rustc` automatically, run:
 
-In a workspace, select the application with `-p my-app`. The [CLI reference](/guide/cli) describes lint settings, profiling and the other commands.
+```sh
+cargo tessera fix
+```
+
+In a multi-crate workspace, pass `-p my-app` to target a specific package. If you use a coding agent, you can also install the bundled Tessera skill into your project or home directory with `cargo tessera skill --local` or `--global`.
 
 ## Next steps
 
-The [Tutorial](/guide/tutorial) starts from this project and builds a small app one change at a time. If you would rather understand the generated files first, read [Project structure](/guide/project-structure).
+Follow the [Tutorial](/guide/tutorial) to turn the template into a working grocery list app one small step at a time, or browse [Project structure](/guide/project-structure) first if you want to know what every generated file does.
