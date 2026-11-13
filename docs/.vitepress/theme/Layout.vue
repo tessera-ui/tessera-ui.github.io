@@ -3,9 +3,10 @@ import { onMounted, provide } from "vue";
 import { useData } from "vitepress";
 import DefaultTheme from "vitepress/theme";
 import DocHeader from "./DocHeader.vue";
+import TesseraHome from "./home/TesseraHome.vue";
 import { toggleAppearance, warmAppearanceTransition } from "./appearance";
 
-const { isDark } = useData();
+const { frontmatter, isDark } = useData();
 
 onMounted(warmAppearanceTransition);
 
@@ -16,7 +17,11 @@ provide("toggle-appearance", (event?: MouseEvent) =>
 </script>
 
 <template>
-  <DefaultTheme.Layout>
+  <!-- Rendered here rather than by each language's index page, so switching
+       languages re-renders the homepage in place and the live demo keeps
+       running. -->
+  <TesseraHome v-if="frontmatter.tesseraHome" />
+  <DefaultTheme.Layout v-else>
     <template #doc-before>
       <DocHeader />
     </template>

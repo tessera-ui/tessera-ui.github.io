@@ -24,6 +24,9 @@ use tessera_components::{
     theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::{ClickableArgs, ModifierExt as _, Padding};
+use tessera_i18n::{I18n, LanguageIdentifier};
+
+use crate::res::I18N;
 use tessera_ui::{
     Color, Dispatcher, Dp, LayoutCoordinates, Model, ModelInit, Modifier, State, Task, launch,
     modifier::FocusModifierExt as _, remember, spawn, tessera, use_context, with_frame_time,
@@ -36,45 +39,66 @@ const EXPANDED: f64 = 840.0;
 const THREAD_WIDTH: Dp = Dp(720.0);
 const CHARS_PER_SECOND: f32 = 90.0;
 
-const SUGGESTIONS: [&str; 3] = [
-    "How does Tessera draw this page?",
-    "What is a model?",
-    "Can I write my own shader?",
-];
+/// A scripted topic. Every field is a message key in `locales/*/chat.ftl`.
+struct Topic {
+    prompt: &'static str,
+    title: &'static str,
+    answer: &'static str,
+    /// Words in any language that select this topic in a typed prompt.
+    keywords: &'static [&'static str],
+}
 
-/// Scripted answers, chosen by a keyword in the prompt.
-const ANSWERS: [(&str, &str); 4] = [
-    (
-        "draw",
-        "Everything you see here is drawn by Tessera on the GPU. Components describe layout and drawing, the renderer batches their draw commands, and wgpu submits them, which in your browser means WebGPU. There is no DOM under this chat: every bubble, glyph and ripple is a draw command.",
-    ),
-    (
-        "model",
-        "A model groups the data and operations of a screen. Fields the UI reads are State handles, other fields are plain data changed by methods. This chat is one: the conversations are a State, and the task streaming this reply is a plain field, so starting a new reply cancels the old one.",
-    ),
-    (
-        "shader",
-        "Yes. Every effect in Tessera is a pluggable WGSL pipeline, the built-in components included. A component records a typed draw command, and the pipeline you register draws it. Shaders can also sample the scene behind them, which is how blur and glass work.",
-    ),
-    (
-        "fast",
-        "Tessera rebuilds only the components that read changed state, keeps layout results when their inputs are unchanged, and redraws without rebuilding when only paint changed. While this reply streams, only the message that grows is rebuilt each frame.",
-    ),
-];
-const FALLBACK: &str = "This demo answers from a short script, so it can't really think. Everything around the answer is real, though: the text field, the buttons, the scrolling list and the frame-by-frame streaming all run in WebAssembly and draw with WebGPU. Try one of the suggestions in a new chat.";
+const DRAW: Topic = Topic {
+    prompt: "prompt-draw",
+    title: "title-draw",
+    answer: "answer-draw",
+    keywords: &["draw", "render", "绘制", "渲染", "画"],
+};
+const MODEL: Topic = Topic {
+    prompt: "prompt-model",
+    title: "title-model",
+    answer: "answer-model",
+    keywords: &["model", "state", "模型", "状态"],
+};
+const SHADER: Topic = Topic {
+    prompt: "prompt-shader",
+    title: "title-shader",
+    answer: "answer-shader",
+    keywords: &["shader", "wgsl", "着色器"],
+};
+const FAST: Topic = Topic {
+    prompt: "prompt-fast",
+    title: "title-fast",
+    answer: "answer-fast",
+    keywords: &["fast", "speed", "perf", "快", "性能"],
+};
+const TOPICS: [&Topic; 4] = [&DRAW, &MODEL, &SHADER, &FAST];
+const SUGGESTIONS: [&Topic; 3] = [&DRAW, &MODEL, &SHADER];
 
-/// The page passes `?theme=dark` so the demo starts in the site's theme.
-fn starts_dark() -> bool {
+fn query_param(name: &str) -> Option<String> {
     #[cfg(target_family = "wasm")]
     {
-        web_sys::window()
-            .and_then(|window| window.location().search().ok())
-            .is_some_and(|query| query.contains("theme=dark"))
+        let query = web_sys::window()?.location().search().ok()?;
+        query.trim_start_matches('?').split('&').find_map(|pair| {
+            let (key, value) = pair.split_once('=')?;
+            (key == name).then(|| value.to_string())
+        })
     }
     #[cfg(not(target_family = "wasm"))]
     {
-        false
+        let _ = name;
+        None
     }
+}
+
+/// The page passes `?theme=dark&lang=zh-CN` so the demo starts in the site's
+/// theme and language; later changes arrive as messages.
+fn starts_dark() -> bool {
+    query_param("theme").as_deref() == Some("dark")
+}
+
+pub(crate) fn initial_language() -> Option<LanguageIdentifier> {
+    query_param("lang")?.parse().ok()
 }
 
 /// The website's indigo, converted from sRGB to the linear seed Tessera expects.
@@ -87,6 +111,23 @@ fn seed() -> Color {
     )
 }
 
+/// Text that is either translated when shown or kept as the user typed it,
+/// so switching languages retranslates the scripted parts of a conversation.
+#[derive(Clone, PartialEq)]
+enum Text {
+    Key(&'static str),
+    Typed(String),
+}
+
+impl Text {
+    fn resolve(&self) -> String {
+        match self {
+            Text::Key(id) => I18N.text(id),
+            Text::Typed(text) => text.clone(),
+        }
+    }
+}
+
 #[derive(Clone, PartialEq)]
 enum Author {
     User,
@@ -96,37 +137,60 @@ enum Author {
 #[derive(Clone, PartialEq)]
 struct Message {
     author: Author,
-    text: String,
+    text: Text,
+    /// Characters revealed so far while the reply streams.
+    shown: Option<usize>,
+}
+
+impl Message {
+    fn new(author: Author, text: Text) -> Self {
+        Self {
+            author,
+            text,
+            shown: None,
+        }
+    }
+
+    fn content(&self) -> String {
+        let text = self.text.resolve();
+        match self.shown {
+            Some(shown) => text.chars().take(shown).collect(),
+            None => text,
+        }
+    }
 }
 
 #[derive(Clone, PartialEq)]
 struct Conversation {
-    title: String,
+    title: Text,
     messages: Vec<Message>,
 }
 
-fn exchange(title: &str, prompt: &str) -> Conversation {
-    Conversation {
-        title: title.into(),
-        messages: vec![
-            Message {
-                author: Author::User,
-                text: prompt.into(),
-            },
-            Message {
-                author: Author::Assistant,
-                text: answer_for(prompt).into(),
-            },
-        ],
+impl Conversation {
+    fn empty() -> Self {
+        Self {
+            title: Text::Key("chat-new"),
+            messages: Vec::new(),
+        }
+    }
+
+    fn about(topic: &Topic) -> Self {
+        Self {
+            title: Text::Key(topic.title),
+            messages: vec![
+                Message::new(Author::User, Text::Key(topic.prompt)),
+                Message::new(Author::Assistant, Text::Key(topic.answer)),
+            ],
+        }
     }
 }
 
 fn answer_for(prompt: &str) -> &'static str {
     let prompt = prompt.to_lowercase();
-    ANSWERS
+    TOPICS
         .iter()
-        .find(|(keyword, _)| prompt.contains(keyword))
-        .map_or(FALLBACK, |(_, answer)| answer)
+        .find(|topic| topic.keywords.iter().any(|word| prompt.contains(word)))
+        .map_or("answer-fallback", |topic| topic.answer)
 }
 
 struct Chat {
@@ -140,13 +204,10 @@ impl ModelInit for Chat {
     fn init() -> Self {
         Self {
             conversations: State::new(vec![
-                Conversation {
-                    title: "New chat".into(),
-                    messages: Vec::new(),
-                },
-                exchange("Why it is fast", "What makes Tessera fast?"),
-                exchange("Models and state", "What is a model?"),
-                exchange("Custom shaders", "Can I write my own shader?"),
+                Conversation::empty(),
+                Conversation::about(&FAST),
+                Conversation::about(&MODEL),
+                Conversation::about(&SHADER),
             ]),
             selected: State::new(0),
             streaming: State::new(false),
@@ -169,15 +230,8 @@ impl Chat {
         match empty {
             Some(index) => self.selected.set(index),
             None => {
-                self.conversations.with_mut(|all| {
-                    all.insert(
-                        0,
-                        Conversation {
-                            title: "New chat".into(),
-                            messages: Vec::new(),
-                        },
-                    )
-                });
+                self.conversations
+                    .with_mut(|all| all.insert(0, Conversation::empty()));
                 self.selected.set(0);
             }
         }
@@ -186,11 +240,45 @@ impl Chat {
     fn stop(&mut self) {
         self.reply = None;
         self.streaming.set(false);
+        let index = self.selected.get();
+        // A stopped reply keeps what it showed.
+        self.conversations.with_mut(|all| {
+            for message in &mut all[index].messages {
+                if message.shown.is_some() {
+                    message.text = Text::Typed(message.content());
+                    message.shown = None;
+                }
+            }
+        });
     }
 
-    fn send(&mut self, prompt: String) {
+    fn ask(&mut self, topic: &Topic) {
+        self.send(
+            Text::Key(topic.prompt),
+            Text::Key(topic.title),
+            topic.answer,
+        );
+    }
+
+    fn ask_typed(&mut self, prompt: String) {
         let prompt = prompt.trim().to_string();
-        if prompt.is_empty() || self.streaming.get() {
+        if prompt.is_empty() {
+            return;
+        }
+        let title = if prompt.chars().count() > 20 {
+            format!(
+                "{}…",
+                prompt.chars().take(19).collect::<String>().trim_end()
+            )
+        } else {
+            prompt.clone()
+        };
+        let answer = answer_for(&prompt);
+        self.send(Text::Typed(prompt), Text::Typed(title), answer);
+    }
+
+    fn send(&mut self, prompt: Text, title: Text, answer: &'static str) {
+        if self.streaming.get() {
             return;
         }
         let index = self.selected.get();
@@ -198,46 +286,33 @@ impl Chat {
         let message = conversations.with_mut(|all| {
             let conversation = &mut all[index];
             if conversation.messages.is_empty() {
-                conversation.title = if prompt.chars().count() > 20 {
-                    format!(
-                        "{}…",
-                        prompt.chars().take(19).collect::<String>().trim_end()
-                    )
-                } else {
-                    prompt.clone()
-                };
+                conversation.title = title;
             }
-            conversation.messages.push(Message {
-                author: Author::User,
-                text: prompt.clone(),
-            });
+            conversation
+                .messages
+                .push(Message::new(Author::User, prompt));
             conversation.messages.push(Message {
                 author: Author::Assistant,
-                text: String::new(),
+                text: Text::Key(answer),
+                shown: Some(0),
             });
             conversation.messages.len() - 1
         });
-        let answer = answer_for(&prompt);
         let streaming = self.streaming;
         streaming.set(true);
-        // Reveal the answer a few characters per frame. Replacing the task
-        // cancels a reply that is still streaming.
+        // Reveal the answer a few characters per frame, in whatever language
+        // is current. Replacing the task cancels a reply that is still
+        // streaming.
         self.reply = Some(spawn(Dispatcher::Ui, async move {
             let start = with_frame_time(|time| time).await;
-            let total = answer.chars().count();
             loop {
-                let shown = with_frame_time(move |time| {
-                    let elapsed = time.duration_since(start).as_secs_f32();
-                    ((elapsed * CHARS_PER_SECOND) as usize).min(total)
-                })
-                .await;
-                let end = answer
-                    .char_indices()
-                    .nth(shown)
-                    .map_or(answer.len(), |(at, _)| at);
-                conversations
-                    .with_mut(|all| all[index].messages[message].text = answer[..end].into());
-                if shown == total {
+                let elapsed = with_frame_time(move |time| time.duration_since(start)).await;
+                let wanted = (elapsed.as_secs_f32() * CHARS_PER_SECOND) as usize;
+                let done = wanted >= I18N.text(answer).chars().count();
+                conversations.with_mut(|all| {
+                    all[index].messages[message].shown = (!done).then_some(wanted);
+                });
+                if done {
                     break;
                 }
             }
@@ -246,10 +321,16 @@ impl Chat {
     }
 }
 
-/// Waits for the homepage to report a theme change, as
-/// `{ source: "tessera-site", theme: "dark" | "light" }`.
+/// What the homepage reports, as `{ source: "tessera-site", theme, lang }`.
 #[cfg(target_family = "wasm")]
-async fn next_theme() -> Option<bool> {
+struct SiteUpdate {
+    dark: Option<bool>,
+    language: Option<LanguageIdentifier>,
+}
+
+/// Waits for the next message from the homepage.
+#[cfg(target_family = "wasm")]
+async fn next_update() -> Option<SiteUpdate> {
     use wasm_bindgen::JsCast as _;
     let window = web_sys::window()?;
     let message = js_sys::Promise::new(&mut |resolve, _reject| {
@@ -262,7 +343,10 @@ async fn next_theme() -> Option<bool> {
     let event = wasm_bindgen_futures::JsFuture::from(message).await.ok()?;
     let data = event.dyn_into::<web_sys::MessageEvent>().ok()?.data();
     let field = |name: &str| js_sys::Reflect::get(&data, &name.into()).ok()?.as_string();
-    (field("source")? == "tessera-site").then(|| field("theme").as_deref() == Some("dark"))
+    (field("source")? == "tessera-site").then(|| SiteUpdate {
+        dark: field("theme").map(|theme| theme == "dark"),
+        language: field("lang").and_then(|lang| lang.parse().ok()),
+    })
 }
 
 #[tessera]
@@ -272,8 +356,17 @@ pub fn app() {
     #[cfg(target_family = "wasm")]
     tessera_ui::launch_once(async move {
         loop {
-            if let Some(next) = next_theme().await {
+            let Some(update) = next_update().await else {
+                continue;
+            };
+            if let Some(next) = update.dark {
                 dark.set(next);
+            }
+            if let Some(language) = update.language {
+                let i18n = I18n::current();
+                if i18n.locale() != language {
+                    i18n.set_locale(language);
+                }
             }
         }
     });
@@ -281,7 +374,6 @@ pub fn app() {
         .theme(move || MaterialTheme::from_seed(seed(), dark.get()))
         .child(chat_screen);
 }
-
 /// The demo's width before its first layout, so the panel starts in the
 /// right state instead of animating on load.
 fn initial_width() -> Dp {
@@ -459,7 +551,7 @@ fn side_panel(panel: Panel, model: Model<Chat>) {
             icon_button()
                 .variant(IconButtonVariant::Standard)
                 .icon(filled::MENU_OPEN_SVG)
-                .accessibility_label("Close sidebar")
+                .accessibility_label(I18N.text("sidebar-close"))
                 .on_click(move || panel.set(false));
             spacer().modifier(Modifier::new().height(Dp(12.0)));
             button()
@@ -476,16 +568,16 @@ fn side_panel(panel: Panel, model: Model<Chat>) {
                         .children(|| {
                             icon().painter(filled::ADD_SVG).size(Dp(20.0));
                             spacer().modifier(Modifier::new().width(Dp(8.0)));
-                            text("New chat");
+                            text(I18N.text("chat-new"));
                         });
                 });
             spacer().modifier(Modifier::new().height(Dp(24.0)));
-            text("Recent")
+            text(I18N.text("chat-recent"))
                 .style(theme.typography.label_medium)
                 .color(theme.color_scheme.on_surface_variant)
                 .modifier(Modifier::new().padding_symmetric(Dp(16.0), Dp(8.0)));
             let titles =
-                conversations.with(|all| all.iter().map(|c| c.title.clone()).collect::<Vec<_>>());
+                conversations.with(|all| all.iter().map(|c| c.title.resolve()).collect::<Vec<_>>());
             let current = selected.get();
             for (index, title) in titles.into_iter().enumerate() {
                 conversation_item(title, index == current).on_click(move || {
@@ -541,7 +633,7 @@ fn conversation_item(
 fn top_bar(panel: Panel, show_toggle: bool, model: Model<Chat>) {
     let theme = use_context::<MaterialTheme>().unwrap().get();
     let (conversations, selected) = model.with(|chat| (chat.conversations, chat.selected));
-    let title = conversations.with(|all| all[selected.get()].title.clone());
+    let title = conversations.with(|all| all[selected.get()].title.resolve());
     row()
         .modifier(
             Modifier::new()
@@ -555,12 +647,12 @@ fn top_bar(panel: Panel, show_toggle: bool, model: Model<Chat>) {
                 icon_button()
                     .variant(IconButtonVariant::Standard)
                     .icon(filled::MENU_SVG)
-                    .accessibility_label("Open sidebar")
+                    .accessibility_label(I18N.text("sidebar-open"))
                     .on_click(move || panel.set(true));
                 icon_button()
                     .variant(IconButtonVariant::Standard)
                     .icon(filled::ADD_SVG)
-                    .accessibility_label("New chat")
+                    .accessibility_label(I18N.text("chat-new"))
                     .on_click(move || model.with_mut(Chat::new_chat));
             }
             text(title.clone())
@@ -591,7 +683,7 @@ fn thread(model: Model<Chat>) {
 
     // Follow the newest text: scroll whenever the conversation or the length
     // of its last message changes.
-    let last_len = messages.last().map_or(0, |m| m.text.len());
+    let last_len = messages.last().map_or(0, |m| m.content().len());
     let anchor = messages.len();
     launch((index, anchor, last_len), async move {
         let offset = Dp((height.get().0 - 24.0).max(0.0));
@@ -631,11 +723,7 @@ fn thread(model: Model<Chat>) {
                         .children(move || match &message {
                             Some(message) => {
                                 let typing = streaming.get() && index + 1 == count;
-                                bubble(
-                                    message.text.clone(),
-                                    message.author == Author::User,
-                                    typing,
-                                );
+                                bubble(message.content(), message.author == Author::User, typing);
                             }
                             None => {
                                 spacer().modifier(Modifier::new().height(Dp(8.0)));
@@ -693,16 +781,16 @@ fn empty_state(model: Model<Chat>) {
         .main_axis_alignment(MainAxisAlignment::Center)
         .cross_axis_alignment(CrossAxisAlignment::Center)
         .children(move || {
-            text("What can I help with?").style(theme.typography.emphasized().headline_medium);
+            text(I18N.text("chat-empty")).style(theme.typography.emphasized().headline_medium);
             spacer().modifier(Modifier::new().height(Dp(24.0)));
             flow_row()
                 .item_spacing(Dp(8.0))
                 .line_spacing(Dp(8.0))
                 .children(move || {
-                    for suggestion in SUGGESTIONS {
+                    for topic in SUGGESTIONS {
                         chip()
-                            .assist(suggestion)
-                            .on_click(move || model.with_mut(|chat| chat.send(suggestion.into())));
+                            .assist(I18N.text(topic.prompt))
+                            .on_click(move || model.with_mut(|chat| chat.ask(topic)));
                     }
                 });
         });
@@ -719,7 +807,7 @@ fn composer(model: Model<Chat>) {
             return;
         }
         input.with_mut(|input| input.set_text(""));
-        model.with_mut(|chat| chat.send(prompt));
+        model.with_mut(|chat| chat.ask_typed(prompt));
     };
     boxed()
         .alignment(Alignment::TopCenter)
@@ -739,8 +827,8 @@ fn composer(model: Model<Chat>) {
                                 .children(move || {
                                     text_field()
                                         .controller(input)
-                                        .placeholder("Ask anything")
-                                        .accessibility_label("Message")
+                                        .placeholder(I18N.text("chat-placeholder"))
+                                        .accessibility_label(I18N.text("chat-message"))
                                         .show_indicator(false)
                                         .background_color(Color::TRANSPARENT)
                                         .focus_background_color(Color::TRANSPARENT)
@@ -752,13 +840,13 @@ fn composer(model: Model<Chat>) {
                                 icon_button()
                                     .size(IconButtonSize::Medium)
                                     .icon(filled::STOP_SVG)
-                                    .accessibility_label("Stop")
+                                    .accessibility_label(I18N.text("chat-stop"))
                                     .on_click(move || model.with_mut(Chat::stop));
                             } else {
                                 icon_button()
                                     .size(IconButtonSize::Medium)
                                     .icon(filled::ARROW_UPWARD_SVG)
-                                    .accessibility_label("Send")
+                                    .accessibility_label(I18N.text("chat-send"))
                                     .on_click(submit);
                             }
                         });

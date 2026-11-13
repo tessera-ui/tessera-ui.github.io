@@ -19,6 +19,10 @@ pub fn run() -> EntryPoint {
             ..res::application()
         })
         .package(tessera_components::ComponentsPackage)
+        .package(match app::initial_language() {
+            Some(language) => res::i18n().locale(language),
+            None => res::i18n(),
+        })
 }
 
 #[cfg(target_family = "wasm")]

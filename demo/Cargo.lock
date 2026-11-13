@@ -3468,6 +3468,7 @@ dependencies = [
  "tessera-build",
  "tessera-components",
  "tessera-foundation",
+ "tessera-i18n",
  "tessera-ui",
  "tokio",
  "wasm-bindgen",

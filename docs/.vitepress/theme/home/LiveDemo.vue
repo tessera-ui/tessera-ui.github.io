@@ -2,9 +2,11 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
 import { useData, withBase } from "vitepress";
 import type { DemoCopy } from "./copy";
+import { localeByKey } from "../../locales";
 
 const props = defineProps<{ copy: DemoCopy }>();
-const { isDark } = useData();
+const { isDark, localeIndex } = useData();
+const language = computed(() => localeByKey(localeIndex.value).lang);
 
 // `bun run demo:build` writes demo-build.json next to the built demo; without
 // a build the section is left out, so the site still builds on its own.
@@ -39,23 +41,29 @@ const status = computed(
     })[phase.value],
 );
 
-// The demo starts in the site's current theme and follows later changes
-// through messages.
+// The demo starts in the site's current theme and language and follows
+// later changes through messages.
 function start() {
   if (phase.value !== "idle" && phase.value !== "failed") return;
   phase.value = "loading";
   const theme = isDark.value ? "dark" : "light";
-  src.value = withBase(`/demo/index.html?theme=${theme}&v=${build?.hash}`);
+  src.value = withBase(
+    `/demo/index.html?theme=${theme}&lang=${language.value}&v=${build?.hash}`,
+  );
 }
 
 const frame = ref<HTMLIFrameElement>();
-function sendTheme() {
+function sendSettings() {
   frame.value?.contentWindow?.postMessage(
-    { source: "tessera-site", theme: isDark.value ? "dark" : "light" },
+    {
+      source: "tessera-site",
+      theme: isDark.value ? "dark" : "light",
+      lang: language.value,
+    },
     location.origin,
   );
 }
-watch(isDark, sendTheme);
+watch([isDark, language], sendSettings);
 
 function onMessage(event: MessageEvent) {
   const data = event.data;
@@ -63,8 +71,8 @@ function onMessage(event: MessageEvent) {
     return;
   if (data.type === "ready") {
     phase.value = "ready";
-    // The theme may have changed while the demo was loading.
-    sendTheme();
+    // The theme or language may have changed while the demo was loading.
+    sendSettings();
   } else {
     phase.value = data.detail === "webgpu" ? "unsupported" : "failed";
   }

@@ -19,6 +19,7 @@ path = "src/main.rs"
 tessera-ui = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
 tessera-components = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
 tessera-foundation = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+tessera-i18n = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 tokio = "1"
