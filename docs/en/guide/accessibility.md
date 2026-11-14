@@ -17,7 +17,7 @@ Whenever an existing control fits, use it—`text_field`, `checkbox`, `radio_gro
 - Resolve accessibility strings from the same localization catalog as visible UI copy.
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     icon_button::icon_button,
     material_icons::filled,
     radio_button::{radio_button, radio_group},
@@ -58,7 +58,7 @@ Only nodes with semantic metadata appear in the published tree—plain layout co
 With `SemanticsArgs::default()`, `merge_descendants` is `false`, meaning the parent node's description replaces its descendants:
 
 ```rust
-use tessera_components::{row::row, text::text};
+use tessera_components::{md3::text::text, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, SemanticsArgs};
 use tessera_ui::{Modifier, accesskit::Role, tessera};
 
@@ -82,7 +82,7 @@ fn rating(stars: u8) {
 When labeling a container whose child controls must remain individually interactive (such as a toolbar), set `merge_descendants: true` (or use `clear_and_set_semantics(args)` when explicitly replacing all child semantics):
 
 ```rust
-use tessera_components::{button::button, row::row, text::text};
+use tessera_components::{md3::{button::button, text::text}, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, SemanticsArgs};
 use tessera_ui::{Callback, Modifier, accesskit::Role, tessera};
 
@@ -117,7 +117,7 @@ Keyboard traversal and reading order follow child declaration/placement order, s
 - For toolbars and grouped controls, make the container one Tab stop with arrow-key movement inside:
 
 ```rust
-use tessera_components::{icon_button::icon_button, material_icons::filled, row::row};
+use tessera_components::{md3::{icon_button::icon_button, material_icons::filled}, row::row};
 use tessera_ui::{FocusTraversalPolicy, Modifier, modifier::FocusModifierExt as _, tessera};
 
 #[tessera]

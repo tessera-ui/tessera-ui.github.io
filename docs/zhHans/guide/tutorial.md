@@ -22,7 +22,7 @@ cargo tessera dev
 打开 `src/app.rs`，模板默认是这样的：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -51,7 +51,7 @@ pub fn app() {
 组件就是加上 `#[tessera]` 的 Rust 函数。先写一个显示单个条目名字的 `grocery_item`，把原来的问候语换掉：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -89,10 +89,12 @@ fn grocery_item(#[prop(into)] name: String) {
 ```rust
 use tessera_components::{
     column::column,
+    md3::{
+        surface::surface,
+        text::text,
+        theme::{MaterialTheme, material_theme},
+    },
     spacer::spacer,
-    surface::surface,
-    text::text,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
@@ -141,15 +143,17 @@ fn grocery_item(#[prop(into)] name: String) {
 use tessera_components::{
     alignment::CrossAxisAlignment,
     boxed::boxed,
-    button::button,
     column::column,
+    md3::{
+        button::button,
+        surface::surface,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+        theme::{MaterialTheme, material_theme},
+    },
     row::row,
     spacer::spacer,
-    surface::surface,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Callback, Dp, Modifier, key, remember, tessera};
@@ -241,18 +245,20 @@ fn grocery_screen() {
 use tessera_components::{
     alignment::CrossAxisAlignment,
     boxed::boxed,
-    button::button,
-    checkbox::checkbox,
     column::column,
-    icon_button::icon_button,
-    material_icons::filled,
+    md3::{
+        button::button,
+        checkbox::checkbox,
+        icon_button::icon_button,
+        material_icons::filled,
+        surface::surface,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+        theme::{MaterialTheme, material_theme},
+    },
     row::row,
     spacer::spacer,
-    surface::surface,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Callback, CallbackWith, Dp, Modifier, State, key, remember, tessera};
@@ -316,7 +322,7 @@ fn grocery_item(item: Grocery, on_checked_change: CallbackWith<bool>, on_delete:
 
 ## 第 5 步：用惰性列表支持长列表滚动
 
-连续添加十几条之后，下面的条目就会顶出窗口底部：`column` 会把所有子组件一股脑全建出来。把 `for` 循环换成 `lazy_column`，不仅能滚动，还只构建视口里看得见的那几行。在 `tessera_components` 导入里加上 `lazy_list::lazy_column`，把 `tessera_ui` 导入里的 `key` 删掉（惰性列表自己带 key 方法），然后替换循环：
+连续添加十几条之后，下面的条目就会顶出窗口底部：`column` 会把所有子组件一股脑全建出来。把 `for` 循环换成 `lazy_column`，不仅能滚动，还只构建视口里看得见的那几行。在 `tessera_components::md3` 导入里加上 `lazy_list::lazy_column`，把 `tessera_ui` 导入里的 `key` 删掉（惰性列表自己带 key 方法），然后替换循环：
 
 ```rust
             lazy_column()
@@ -445,19 +451,21 @@ fn grocery_screen(dark: State<bool>) {
 use tessera_components::{
     alignment::CrossAxisAlignment,
     boxed::boxed,
-    button::button,
-    checkbox::checkbox,
     column::column,
-    icon_button::icon_button,
-    lazy_list::lazy_column,
-    material_icons::filled,
+    md3::{
+        button::button,
+        checkbox::checkbox,
+        icon_button::icon_button,
+        lazy_list::lazy_column,
+        material_icons::filled,
+        surface::surface,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+        theme::{MaterialTheme, material_theme},
+    },
     row::row,
     spacer::spacer,
-    surface::surface,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{

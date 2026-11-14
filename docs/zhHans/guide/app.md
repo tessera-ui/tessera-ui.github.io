@@ -117,7 +117,7 @@ icon = "icon.svg"
 2. 在应用栏组件上开启 `.window_chrome(true)`：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     app_bar::top_app_bar,
     theme::{MaterialTheme, material_theme},
 };
@@ -138,7 +138,7 @@ macOS 会保留原生红绿灯按钮并把应用栏设为拖动区；Windows 和
 如果需要自定义窗口控制按钮，添加 `tessera-platform`（`cargo add tessera-platform`），直接把 `tessera_platform::window` 里的函数传给 `on_click`：
 
 ```rust
-use tessera_components::{button::button, row::row, text::text};
+use tessera_components::{md3::{button::button, text::text}, row::row};
 use tessera_platform::window;
 use tessera_ui::tessera;
 

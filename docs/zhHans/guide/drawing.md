@@ -5,7 +5,7 @@ description: 编写自定义 DrawCommand 与 ComputeCommand，通过 RenderModul
 
 # 自定义绘制与着色器
 
-当内置修饰符（`background`、`border`、`shadow`、`clip_shape`）、`Painter` 图片/SVG 或 `fluid_glass` 无法表达所需视觉效果时，可以编写自定义命令并配套 `wgpu` 着色器管线，通过 `RenderModule` 注册到渲染器。
+当内置修饰符（`background`、`border`、`shadow`、`clip_shape`）、`Painter` 图片/SVG 或 `experiment::hig::glass` 无法表达所需视觉效果时，可以编写自定义命令并配套 `wgpu` 着色器管线，通过 `RenderModule` 注册到渲染器。
 
 ## 在组件中记录绘制命令
 

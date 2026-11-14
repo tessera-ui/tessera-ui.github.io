@@ -22,7 +22,7 @@ Leave `cargo tessera dev` running in the background while you work. Every time y
 Open `src/app.rs`. The template starts like this:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -51,7 +51,7 @@ Reading from outside in: `material_theme()` provides Material theme defaults to 
 A component is a Rust function annotated with `#[tessera]`. Write a `grocery_item` component and display it instead of the greeting:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     surface::surface,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -89,10 +89,12 @@ A list needs more than one item. Move the screen layout into a `grocery_screen` 
 ```rust
 use tessera_components::{
     column::column,
+    md3::{
+        surface::surface,
+        text::text,
+        theme::{MaterialTheme, material_theme},
+    },
     spacer::spacer,
-    surface::surface,
-    text::text,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
@@ -141,15 +143,17 @@ A real list starts empty and grows from user input. You need three things: state
 use tessera_components::{
     alignment::CrossAxisAlignment,
     boxed::boxed,
-    button::button,
     column::column,
+    md3::{
+        button::button,
+        surface::surface,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+        theme::{MaterialTheme, material_theme},
+    },
     row::row,
     spacer::spacer,
-    surface::surface,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Callback, Dp, Modifier, key, remember, tessera};
@@ -241,18 +245,20 @@ Now give each item a `done` flag, a checkbox, and a delete icon button. Update t
 use tessera_components::{
     alignment::CrossAxisAlignment,
     boxed::boxed,
-    button::button,
-    checkbox::checkbox,
     column::column,
-    icon_button::icon_button,
-    material_icons::filled,
+    md3::{
+        button::button,
+        checkbox::checkbox,
+        icon_button::icon_button,
+        material_icons::filled,
+        surface::surface,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+        theme::{MaterialTheme, material_theme},
+    },
     row::row,
     spacer::spacer,
-    surface::surface,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Callback, CallbackWith, Dp, Modifier, State, key, remember, tessera};
@@ -316,7 +322,7 @@ Notice how `grocery_item` owns no state: it takes the current `item` value and r
 
 ## Step 5: Make long lists scroll
 
-Add a dozen items and the bottom ones overflow the window: `column` builds and lays out every child at once. Replace the `for` loop with `lazy_column`, which scrolls and builds only the items visible in its viewport. Add `lazy_list::lazy_column` to the `tessera_components` imports, remove `key` from the `tessera_ui` imports (the lazy list tracks keys directly), and replace the loop:
+Add a dozen items and the bottom ones overflow the window: `column` builds and lays out every child at once. Replace the `for` loop with `lazy_column`, which scrolls and builds only the items visible in its viewport. Add `lazy_list::lazy_column` to the `tessera_components::md3` imports, remove `key` from the `tessera_ui` imports (the lazy list tracks keys directly), and replace the loop:
 
 ```rust
             lazy_column()
@@ -445,19 +451,21 @@ Add `Color` and `use_context` to the `tessera_ui` imports. Controls switch to th
 use tessera_components::{
     alignment::CrossAxisAlignment,
     boxed::boxed,
-    button::button,
-    checkbox::checkbox,
     column::column,
-    icon_button::icon_button,
-    lazy_list::lazy_column,
-    material_icons::filled,
+    md3::{
+        button::button,
+        checkbox::checkbox,
+        icon_button::icon_button,
+        lazy_list::lazy_column,
+        material_icons::filled,
+        surface::surface,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+        theme::{MaterialTheme, material_theme},
+    },
     row::row,
     spacer::spacer,
-    surface::surface,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{

@@ -8,7 +8,7 @@ description: Hook into host lifecycle events with Plugin, bundle integrations as
 When an app needs capabilities outside the UI tree—native SDKs, platform handles, or host-managed services—put them in a `Plugin`. Plugins are owned by the active `RuntimeSession`, receive host lifecycle hooks, and are accessed anywhere in that session by Rust type.
 
 ```rust
-use tessera_components::{ComponentsPackage, text::text, theme::material_theme};
+use tessera_components::{ComponentsPackage, md3::{text::text, theme::material_theme}};
 use tessera_ui::{EntryPoint, Plugin, tessera, with_plugin};
 
 struct GreetingPlugin {

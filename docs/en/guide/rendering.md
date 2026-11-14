@@ -30,7 +30,7 @@ Between frames, Tessera preserves the rendered scene target and collects old/new
 
 Partial redraw falls back to a full scene redraw when:
 
-- Background-sampling draws (`SampleRegion`, such as `fluid_glass`) or compute passes are active (including the first frame after removal).
+- Background-sampling draws (`SampleRegion`, such as `experiment::hig::glass`) or compute passes are active (including the first frame after removal).
 - The viewport resizes or the render target is recreated.
 - A custom `DrawCommand` leaves `supports_partial_redraw()` at its default `false`.
 
@@ -49,7 +49,7 @@ Use `UiTest::work()`, `work_totals()`, and `diagnostics()` (with the `testing` f
 ```rust
 use std::time::Duration;
 
-use tessera_components::{column::column, text::text, theme::material_theme};
+use tessera_components::{column::column, md3::{text::text, theme::material_theme}};
 use tessera_ui::{
     State, remember, tessera,
     testing::{TestProbe, UiTest, WorkPhase},

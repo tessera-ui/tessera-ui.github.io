@@ -12,7 +12,7 @@ description: 理解 #[tessera] 组件、配置句柄、RenderSlot、Callback 以
 给函数加上 `#[tessera]` 就成了一个组件。普通参数是调用时的必填位置参数；`Option<T>` 参数会变成返回值句柄上的同名可选 setter。
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::tessera;
 
 #[tessera]
@@ -40,7 +40,7 @@ fn greeting_demo() {
 条件显示和循环直接使用 `if`、`match` 和 `for`：
 
 ```rust
-use tessera_components::{column::column, text::text};
+use tessera_components::{column::column, md3::text::text};
 use tessera_ui::tessera;
 
 #[tessera]
@@ -60,7 +60,7 @@ fn greetings(names: Vec<String>) {
 调用组件即在当前位置登记一次使用，并返回一个带类型的配置句柄。即便把句柄存进变量再按别的顺序设置属性，树里的排列顺序依然严格按照调用顺序：
 
 ```rust
-use tessera_components::{row::row, text::text};
+use tessera_components::{md3::text::text, row::row};
 use tessera_ui::{Dp, tessera};
 
 #[tessera]
@@ -82,7 +82,7 @@ fn heading() {
 用 `RenderSlot`（或需要向下传参时用 `RenderSlotWith<T>`）接收延迟展开的子内容：
 
 ```rust
-use tessera_components::{column::column, text::text};
+use tessera_components::{column::column, md3::text::text};
 use tessera_ui::{RenderSlot, tessera};
 
 #[tessera]
@@ -108,7 +108,7 @@ fn page() {
 数据通过参数向下传，操作通过 `Callback` 或 `CallbackWith<T, R>` 向上抛：
 
 ```rust
-use tessera_components::{button::button, text::text};
+use tessera_components::md3::{button::button, text::text};
 use tessera_ui::{Callback, tessera};
 
 #[tessera]

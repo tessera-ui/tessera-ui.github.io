@@ -31,8 +31,8 @@ description: 响应点击、开关、选择、拖动，管理键盘焦点遍历�
 ```rust
 use tessera_components::{
     boxed::boxed,
+    md3::text::text,
     modifier::ModifierExt as _,
-    text::text,
 };
 use tessera_foundation::modifier::{ClickableArgs, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, tessera};
@@ -55,7 +55,7 @@ fn save_action(on_save: Callback) {
 自定义开关行示例：
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, row::row, text::text};
+use tessera_components::{md3::text::text, modifier::ModifierExt as _, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, ToggleableArgs};
 use tessera_ui::{CallbackWith, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -83,7 +83,7 @@ fn wifi_row() {
 把记住的 `State<InteractionState>` 传给交互修饰符，即可在构建时读取悬停、按下、焦点和拖动状态来改变外观：
 
 ```rust
-use tessera_components::{boxed::boxed, modifier::ModifierExt as _, text::text};
+use tessera_components::{boxed::boxed, md3::text::text, modifier::ModifierExt as _};
 use tessera_foundation::modifier::{ClickableArgs, InteractionState, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -116,7 +116,7 @@ fn hold_to_preview() {
 用 `remember` 保存 `FocusRequester` 并绑定到节点，在动作回调中请求焦点（不要在构建体里无条件请求，否则会抢走用户的键盘导航位置）：
 
 ```rust
-use tessera_components::{boxed::boxed, button::button, column::column, text::text};
+use tessera_components::{boxed::boxed, column::column, md3::{button::button, text::text}};
 use tessera_ui::{FocusRequester, Modifier, modifier::FocusModifierExt as _, remember, tessera};
 
 #[tessera]

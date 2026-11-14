@@ -17,9 +17,9 @@ Tessera 里的界面是用几种基础容器嵌套拼出来的。每种容器只
 use tessera_components::{
     alignment::CrossAxisAlignment,
     column::column,
+    md3::text::text,
     row::row,
     spacer::spacer,
-    text::text,
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
@@ -53,9 +53,9 @@ fn message_preview() {
 ```rust
 use tessera_components::{
     alignment::CrossAxisAlignment,
+    md3::text::text,
     row::row,
     spacer::spacer,
-    text::text,
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
@@ -80,7 +80,7 @@ fn folder_row() {
 `boxed().alignment(...)` 设置所有子组件的默认叠放位置，个别子组件可以用 `.align(...)` 单独覆盖：
 
 ```rust
-use tessera_components::{alignment::Alignment, boxed::boxed, text::text};
+use tessera_components::{alignment::Alignment, boxed::boxed, md3::text::text};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
@@ -101,7 +101,7 @@ fn layered_label() {
 一排标签放不下时希望自动折行，用 `flow_row()`；垂直折列用 `flow_column()`：
 
 ```rust
-use tessera_components::{flow_row::flow_row, text::text};
+use tessera_components::{flow_row::flow_row, md3::text::text};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
@@ -147,7 +147,7 @@ let exact = Constraint::exact(Px(320), Px(240));
 在手机或无边框全屏窗口里，状态栏、刘海和软键盘会遮挡窗口边缘。全屏页面最省事的做法是交给 `scaffold`：
 
 ```rust
-use tessera_components::{scaffold::scaffold, text::text};
+use tessera_components::md3::{scaffold::scaffold, text::text};
 use tessera_ui::{WindowInsets, tessera};
 
 #[tessera]

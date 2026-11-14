@@ -31,8 +31,8 @@ Give custom clickable elements an accessibility `role` and `label` (or `descript
 ```rust
 use tessera_components::{
     boxed::boxed,
+    md3::text::text,
     modifier::ModifierExt as _,
-    text::text,
 };
 use tessera_foundation::modifier::{ClickableArgs, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, tessera};
@@ -55,7 +55,7 @@ fn save_action(on_save: Callback) {
 Here is a custom toggleable row:
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, row::row, text::text};
+use tessera_components::{md3::text::text, modifier::ModifierExt as _, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, ToggleableArgs};
 use tessera_ui::{CallbackWith, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -83,7 +83,7 @@ Keep checked and selected semantics distinct: `toggleable` publishes toggled sta
 Pass a remembered `State<InteractionState>` to interactive modifiers when custom visuals need to react to hover, press, focus, or drag:
 
 ```rust
-use tessera_components::{boxed::boxed, modifier::ModifierExt as _, text::text};
+use tessera_components::{boxed::boxed, md3::text::text, modifier::ModifierExt as _};
 use tessera_foundation::modifier::{ClickableArgs, InteractionState, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -116,7 +116,7 @@ Import focus modifiers from `tessera_ui::modifier::FocusModifierExt`.
 Bind a remembered `FocusRequester` to a focusable node and call `.request_focus()` from an action (never unconditionally during build, or you override user navigation):
 
 ```rust
-use tessera_components::{boxed::boxed, button::button, column::column, text::text};
+use tessera_components::{boxed::boxed, column::column, md3::{button::button, text::text}};
 use tessera_ui::{FocusRequester, Modifier, modifier::FocusModifierExt as _, remember, tessera};
 
 #[tessera]

@@ -30,7 +30,7 @@ Tessera 会在帧与帧之间缓存组件子树、布局测量、绘制命令和
 
 出现以下情况时会保守回退到全量重绘：
 
-- 存在采样背后场景的绘制命令（如 `fluid_glass` 等使用 `SampleRegion` 的效果）或计算命令（含移除后的第一帧）。
+- 存在采样背后场景的绘制命令（如 `experiment::hig::glass` 等使用 `SampleRegion` 的效果）或计算命令（含移除后的第一帧）。
 - 视口尺寸改变或渲染目标重建。
 - 自定义 `DrawCommand` 未覆写 `supports_partial_redraw()`（默认为 `false`）。
 
@@ -49,7 +49,7 @@ Tessera 会在帧与帧之间缓存组件子树、布局测量、绘制命令和
 ```rust
 use std::time::Duration;
 
-use tessera_components::{column::column, text::text, theme::material_theme};
+use tessera_components::{column::column, md3::{text::text, theme::material_theme}};
 use tessera_ui::{
     State, remember, tessera,
     testing::{TestProbe, UiTest, WorkPhase},

@@ -1,23 +1,24 @@
 ---
-title: 列表与滚动
-description: 让放不下的内容可以滚动，并用惰性列表和网格展示长集合。
+title: 列表、网格与滚动
+description: 为有限容器加上滚动、使用惰性列表与网格虚拟化长集合，并控制滚动位置。
 ---
 
-# 列表与滚动
+# 列表、网格与滚动
 
-很多界面要展示的内容都比窗口大：设置页、聊天记录、相册。内容不多时，让普通的列滚动起来就够了；集合很长或长度不定时，惰性列表和网格只构建你能看到的条目，界面的开销取决于视口大小，而不是数据量。
+当内容超出视口时，较小的固定表单可以直接用滚动修饰符包住 `column`。面对长列表或长度不定的集合，使用 Tessera 的惰性列表和惰性网格——它们只构建视口内可见的条目，帧耗时只和屏幕大小有关，与总条目数无关。
 
-本页示例都需要放在 `material_theme()` 下，应用入口还要注册 `ComponentsPackage`。
+本页示例均假设外层存在 `material_theme()`，且入口已注册 `ComponentsPackage`。
 
-## 让内容可以滚动
+## 可滚动容器
 
-滚动修饰符会把内容包进一个视口。用 `remember` 保存 `ScrollableController`，滚动位置才能在重建之间保留：
+为容器挂上滚动修饰符，并用 `remember` 保存 `ScrollableController`，让滚动偏移在重建间保持不变：
 
 ```rust
 use tessera_components::{
-    column::column, modifier::ModifierExt as _, scrollable::ScrollableController,
-    text::text,
+    column::column,
+    md3::{modifier::ModifierExt as _, scrollable::ScrollableController, text::text},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
 
 #[tessera]
@@ -38,24 +39,22 @@ fn notes() {
 }
 ```
 
-水平内容用 `horizontal_scroll`，两个方向都要滚动时用 `scroll(controller, vertical, horizontal)`。滚动内容会被裁剪到视口范围内。
+横向滚动使用 `horizontal_scroll(controller)`，双向滚动使用 `scroll(controller, vertical, horizontal)`。超出视口的内容会被自动裁剪。
 
-加了滚动修饰符的普通列，每次重建仍会构建全部四十行。这适合表单或一页文字；长度取决于数据的列表，请用惰性列表。
+注意必须显式设置 `.height(Dp(240.0))`：滚动视口沿滚动轴必须有有限上界（由父级或尺寸修饰符提供）。同时要注意，普通的 `column` 加 `vertical_scroll` 每次重建仍会构建全部 40 行，适合设置表单或短文，不适合长信息流。
 
-## 给视口一个有限尺寸
-
-视口在滚动方向上必须有有限的尺寸，可以来自父布局，也可以像上面的 `height(Dp(240.0))` 那样显式指定。否则就没有可以滚过的边界。下面的惰性列表和网格也是如此。
-
-::: warning 注意
-同方向的滚动容器相互嵌套时，内层必须有有界的视口。在滚动的父容器里，滚动方向没有上界，在这个方向上“填满空间”会让内层容器得不到可用的视口。
+::: warning 避免同轴嵌套 `fill_max_height`
+在纵向滚动容器内部，传入的高度约束无上界（`max == None`）。切勿直接把只写 `fill_max_height()` 的子滚动容器嵌套其中；请为内层滚动容器指定有限高度。
 :::
 
-## 惰性展示长列表
+## 惰性列表：`lazy_column` 与 `lazy_row`
 
-`lazy_column()` 和 `lazy_row()` 只构建视口内以及 `overscan` 范围内的条目。内容通过 `item`、`items` 或对应的带键方法追加：
+`lazy_column()` 和 `lazy_row()` 只构建可见条目外加少量 `overscan` 预载范围，通过 `item`、`items`、`items_from_iter_with_key` 与 `sticky_header` 追加内容：
 
 ```rust
-use tessera_components::lazy_list::lazy_column;
+use tessera_components::md3::{lazy_list::lazy_column, text::text};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
 fn files() {
@@ -71,26 +70,32 @@ fn files() {
 }
 ```
 
-`item_spacing` 设置条目之间的间距，`content_padding` 在整个列表四周加内边距。列表还可以用 `sticky_header` 声明分组标题，让标题在本组内容滚动时固定在顶部。
+`item_spacing` 控制条目间距，`content_padding` 设置视口内边距，`sticky_header` / `sticky_header_with_key` 可将分组标题吸顶。
 
-## 给条目稳定的键
+## 稳定的 key 与视口外状态
 
-如果条目会移动、插入或删除，就用记录本身稳定且在集合内唯一的标识作为键，就像上例用每条记录的 id 那样。数据变化之后，Tessera 靠键分辨哪个条目是哪个；键如何决定组件身份，见[生命周期与副作用](/zhHans/guide/lifecycle)。
+只要集合会插入、删除或重排，请向 `items_with_key` 或 `items_from_iter_with_key` 传入稳定的业务 ID（仅当下标即唯一身份时才用无 key 的 `items(count, ...)`）：
 
-只有当位置本身就是条目的身份时，才适合用按索引的 `items(count, builder)`。`items_with_key(count, key_provider, builder)` 把取键和渲染分开：键提供函数是只负责计算键的普通 Rust 代码，组件在构建函数里调用；条目构建函数和键提供函数会被保存下来，捕获的值必须拥有所有权，并满足 `'static`；它们运行在 UI 线程上，不需要满足 `Send` 或 `Sync`。
+- key 提取闭包运行在普通 Rust 上下文；条目构建闭包是 Tessera 构建闭包。
+- 两者都会存进属性中，捕获的变量需拥有所有权且满足 `'static`（UI 线程本地类型即可）。
 
-### 视口外的条目会丢失局部状态
-
-光有键，并不能让视口外条目的局部状态一直保留。条目滚出视口足够远后，它的组件会被丢弃，用 `remember` 保存的东西在它回来时会重新开始。列表默认是 `keep_composed_items(false)`；设为 `keep_composed_items(true)` 后，访问过的条目状态会一直保留到列表卸载，内存占用也可能随之增加。
-
-更常见的做法是把需要长期保存的数据，比如复选框的值或一段草稿，放到条目组件之外的状态里，再传给条目。状态提升见[状态](/zhHans/guide/state)。
+默认（`keep_composed_items(false)`）下，滚出视口较远的条目会被卸载，条目内的 `remember` 状态随之重置；虽可设 `.keep_composed_items(true)` 以内存换保留，但更推荐把持久数据（勾选态、草稿）提升到列表之外的 `State` 或 `Model` 中。
 
 ## 控制滚动位置
 
-想在列表外部读取或改变惰性列表的位置，就创建一个 `LazyListController`，用 `remember` 保存后传给列表。下面的按钮让列表滚回第一条：
+`remember` 一个 `LazyListController` 即可从列表外部跳转或读取滚动位置：
 
 ```rust
-use tessera_components::{button::button, lazy_list::LazyListController};
+use tessera_components::{
+    column::column,
+    md3::{
+        button::button,
+        lazy_list::{LazyListController, lazy_column},
+        text::text,
+    },
+};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, remember, tessera};
 
 #[tessera]
 fn history() {
@@ -107,14 +112,19 @@ fn history() {
 }
 ```
 
-`scroll_to_item(index, offset)` 把条目显示在距视口起点 `offset` 的位置，超出列表范围的索引会被忽略；`scroll_to(x, y)` 则按内容偏移滚动。滚动位置和测量缓存都由控制器保存，保留这个控制器，这些数据就能跨导航保留。
+`scroll_to_item(index, offset)` 将指定条目滚动到距离视口起点 `offset` 处（越界索引自动忽略），`scroll_to(x, y)` 则按内容偏移滚动。
 
-## 用网格排列条目
+## 网格、瀑布流与翻页器
 
-平铺的集合用 `lazy_vertical_grid()`，并用 `GridCells` 描述列。自适应写法会在空间允许的范围内，放下尽可能多宽度不小于给定值的列：
+多列或网格布局使用 `lazy_vertical_grid()`（配置 `.columns(...)`）或 `lazy_horizontal_grid()`（配置 `.rows(...)`），搭配 `GridCells`：
 
 ```rust
-use tessera_components::lazy_grid::{GridCells, lazy_vertical_grid};
+use tessera_components::md3::{
+    lazy_grid::{GridCells, lazy_vertical_grid},
+    text::text,
+};
+use tessera_foundation::modifier::ModifierExt as _;
+use tessera_ui::{Dp, Modifier, tessera};
 
 #[tessera]
 fn photo_grid() {
@@ -127,6 +137,12 @@ fn photo_grid() {
 }
 ```
 
-只有父布局的高度有限时，`fill_max_size` 才能给网格一个有界的视口。`GridCells::fixed(3)` 固定列数，`GridCells::fixed_size(Dp(160.0))` 固定交叉轴上的单元格尺寸。`lazy_horizontal_grid()` 改用 `rows(...)`。尺寸不一的瀑布流布局，可以用 `lazy_vertical_staggered_grid()` 或 `lazy_horizontal_staggered_grid()`。
+- `GridCells::adaptive(min_size)`：在可用空间内尽可能多排，每列/行不少于 `min_size`。
+- `GridCells::fixed(count)`：固定列数或行数。
+- `GridCells::fixed_size(size)`：固定交叉轴单元格尺寸。
 
-控制器和条目声明的完整说明，见[惰性列表](https://tessera-ui.github.io/tessera/tessera_components/lazy_list/index.html)、[惰性网格](https://tessera-ui.github.io/tessera/tessera_components/lazy_grid/index.html)和[瀑布流网格](https://tessera-ui.github.io/tessera/tessera_components/lazy_staggered_grid/index.html)的 API 参考。
+不定高瀑布流使用 `lazy_vertical_staggered_grid()` 或 `lazy_horizontal_staggered_grid()`；整页吸附滑动视图使用 `tessera_components::pager::{horizontal_pager, vertical_pager}` 配合 `PagerController`。
+
+## 下一步
+
+继续阅读[文本与文本输入](/zhHans/guide/text)了解字体排版与输入框控制，完整控制器方法见[组件 API 参考](https://tessera-ui.github.io/tessera/tessera_components/)。

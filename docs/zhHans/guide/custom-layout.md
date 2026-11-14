@@ -120,7 +120,7 @@ fn cascade(content: RenderSlot) {
 原生控件始终在局部 `Px` 空间里测量和交互。需要把一个交互子树整体等比缩放（例如把固定规格的示例装进窄容器）时，用 `tessera_ui::scaled_box(scale)` 包住单个直接子节点：
 
 ```rust
-use tessera_components::{column::column, text::text};
+use tessera_components::{column::column, md3::text::text};
 use tessera_ui::{scaled_box, tessera};
 
 #[tessera]

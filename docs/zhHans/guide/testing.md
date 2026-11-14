@@ -51,7 +51,7 @@ fn fixed_gap_size() {
 ```rust
 use std::time::Duration;
 
-use tessera_components::{button::button, column::column, text::text, theme::material_theme};
+use tessera_components::{column::column, md3::{button::button, text::text, theme::material_theme}};
 use tessera_ui::{
     accesskit::{Action, Role},
     remember, tessera,

@@ -25,7 +25,7 @@ Here is a progress label that counts from 0% to 100% over 300 milliseconds:
 ```rust
 use std::time::Duration;
 
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{launch_once, remember, tessera, with_frame_time};
 
 #[tessera]
@@ -60,7 +60,7 @@ Computing progress from elapsed time keeps animations on schedule even if a fram
 Pass the target value as the `key` to `launch(target, ...)`. Whenever `target` changes—even mid-animation—Tessera cancels the old task and starts the new one from whatever value is currently stored in state:
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Modifier, launch, remember, tessera, with_frame_time};
 

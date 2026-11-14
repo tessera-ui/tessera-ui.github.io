@@ -14,7 +14,7 @@ description: 用 key 绑定动态条目身份、按需选择状态生命周期�
 用 `key(...)` 包住动态列表项，并传入稳定的业务主键（不要用循环索引）：
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{key, remember, tessera};
 
 #[derive(Clone, PartialEq)]
@@ -53,7 +53,7 @@ fn item_list(items: Vec<Item>) {
 希望某项局部状态在输入切换时自动重置，使用 `remember_with_key(key, init)`：
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{remember_with_key, tessera};
 
 #[tessera]
@@ -81,7 +81,7 @@ fn contact_details(contact_id: u64, #[prop(into)] phone: String) {
 - **`Model`**：与所属 `ModelStore` 同寿命（在 `shard_home` 路由下被新页面覆盖时保留，弹出或替换时关闭）；独立使用时随组件卸载关闭。
 
 ```rust
-use tessera_components::{button::button, text::text};
+use tessera_components::md3::{button::button, text::text};
 use tessera_ui::{retain, tessera};
 
 #[tessera]
@@ -116,7 +116,7 @@ fn tab_body(selected: usize) {
 3. **组件绑定任务（`launch` / `launch_once`）**：专门用于构建中声明异步工作。`launch(key, future)` 首次构建时启动；`key` 不变时继续运行；`key` 改变时自动取消旧任务并重启新任务；组件卸载时自动取消：
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{Dispatcher, launch, on, remember, tessera};
 
 async fn load_display_name(user_id: u64) -> String {

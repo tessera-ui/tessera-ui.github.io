@@ -43,10 +43,10 @@ exclude = ["runtime/**"]
 
 ## 图片与矢量图标
 
-`Painter` 支持生成的 `Asset` 常量、路径或 URL 字符串、编码字节、`ImageData` 与 `ImageVectorData`。`tessera_components::material_icons` 内置了 `filled`、`outlined`、`round`、`sharp`、`two_tone` 五套 Material 图标常量：
+`Painter` 支持生成的 `Asset` 常量、路径或 URL 字符串、编码字节、`ImageData` 与 `ImageVectorData`。`tessera_components::md3::material_icons` 内置了 `filled`、`outlined`、`round`、`sharp`、`two_tone` 五套 Material 图标常量：
 
 ```rust
-use tessera_components::{icon::icon, material_icons::filled};
+use tessera_components::md3::{icon::icon, material_icons::filled};
 use tessera_ui::tessera;
 
 #[tessera]
@@ -95,7 +95,7 @@ pub fn run() -> EntryPoint {
 ```rust
 use std::{io, sync::Arc};
 
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{LoadState, Resource, remember, tessera};
 
 fn decode_text(bytes: Arc<[u8]>) -> io::Result<String> {

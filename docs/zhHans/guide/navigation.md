@@ -16,7 +16,7 @@ cargo add tessera-shard
 一个最小的双页面跳转示例：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     button::button,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -72,9 +72,11 @@ pub fn app() {
 use tessera_components::{
     boxed::boxed,
     column::column,
-    navigation_bar::{navigation_bar, navigation_bar_item},
-    text::text,
-    theme::{MaterialTheme, material_theme},
+    md3::{
+        navigation_bar::{navigation_bar, navigation_bar_item},
+        text::text,
+        theme::{MaterialTheme, material_theme},
+    },
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_shard::{RouterController, shard, shard_home};
@@ -138,7 +140,7 @@ pub fn app() {
 新页面压入后，被盖住的页面会离开组件树，普通的 `remember` 状态也会随之释放。想在返回时保留编辑状态或滚动进度，给页面加上 `Model<T>` 参数：
 
 ```rust
-use tessera_components::{button::button, text::text};
+use tessera_components::md3::{button::button, text::text};
 use tessera_shard::shard;
 use tessera_ui::{Model, ModelInit, State};
 
@@ -177,7 +179,7 @@ fn editor(model: Model<EditorModel>) {
 页面内用 `launch` 启动的任务会在路由被覆盖时停止，返回时重新启动。任务开头先检查模型是否已加载过数据，避免返回时重复请求：
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_shard::shard;
 use tessera_ui::{Dispatcher, Model, ModelInit, State, launch, on};
 

@@ -23,7 +23,7 @@ See [Identity, lifecycle, and effects](/guide/lifecycle) for why side effects st
 `launch` ties a task to the component call and restarts it whenever `key` changes:
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{Dispatcher, launch, on, remember, tessera};
 
 async fn load_display_name(user_id: u64) -> String {
@@ -54,7 +54,7 @@ Because the outer `future` runs on the UI session (first polled after the curren
 Start action-driven work with `spawn` and keep the returned `Task` on the owning `Model` so replacing the field cancels any superseded request, and closing the model cancels in-flight work:
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{Dispatcher, Model, ModelInit, State, Task, on, spawn, tessera};
 
 async fn fetch_results(query: String) -> Vec<String> {

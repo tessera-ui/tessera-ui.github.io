@@ -16,9 +16,7 @@ Wrap a container in a scroll modifier and remember a `ScrollableController` so t
 ```rust
 use tessera_components::{
     column::column,
-    modifier::ModifierExt as _,
-    scrollable::ScrollableController,
-    text::text,
+    md3::{modifier::ModifierExt as _, scrollable::ScrollableController, text::text},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
@@ -54,7 +52,7 @@ Inside a vertical scroller, the incoming height constraint is unbounded (`max ==
 `lazy_column()` and `lazy_row()` build only visible items plus a small `overscan` margin. Add entries with `item`, `items`, `items_from_iter_with_key`, and `sticky_header`:
 
 ```rust
-use tessera_components::{lazy_list::lazy_column, text::text};
+use tessera_components::md3::{lazy_list::lazy_column, text::text};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
@@ -89,10 +87,12 @@ Create and `remember` a `LazyListController` to jump or inspect scroll state fro
 
 ```rust
 use tessera_components::{
-    button::button,
     column::column,
-    lazy_list::{LazyListController, lazy_column},
-    text::text,
+    md3::{
+        button::button,
+        lazy_list::{LazyListController, lazy_column},
+        text::text,
+    },
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
@@ -119,7 +119,7 @@ fn history() {
 For multi-column or multi-row layouts, use `lazy_vertical_grid()` (configuring `.columns(...)`) or `lazy_horizontal_grid()` (configuring `.rows(...)`) with `GridCells`:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     lazy_grid::{GridCells, lazy_vertical_grid},
     text::text,
 };

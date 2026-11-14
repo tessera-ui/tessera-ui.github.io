@@ -14,7 +14,7 @@ description: 使用 Material 排版层级显示文本，并通过 text_field 与
 从 `theme.typography` 里选择排版角色，标题和正文就能跟随主题比例协调变化：
 
 ```rust
-use tessera_components::{column::column, text::text, theme::MaterialTheme};
+use tessera_components::{column::column, md3::{text::text, theme::MaterialTheme}};
 use tessera_ui::{tessera, use_context};
 
 #[tessera]
@@ -38,7 +38,7 @@ fn article_header() {
 `MaterialTypography` 包含 `display`、`headline`、`title`、`body` 和 `label` 五组规格，每组有大、中、小三个尺寸，也提供 `.emphasized()` 强调样式。局部微调某项属性时，基于主题角色展开即可：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     text::text,
     theme::{MaterialTheme, TextStyle},
 };
@@ -71,7 +71,7 @@ fn report_title() {
 ```rust
 use tessera_components::{
     column::column,
-    text_field::{TextFieldLineLimit, text_field},
+    md3::text_field::{TextFieldLineLimit, text_field},
 };
 use tessera_ui::tessera;
 
@@ -116,11 +116,13 @@ text_field()
 
 ```rust
 use tessera_components::{
-    button::button,
     column::column,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
+    md3::{
+        button::button,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+    },
 };
 use tessera_ui::{Dp, remember, tessera};
 

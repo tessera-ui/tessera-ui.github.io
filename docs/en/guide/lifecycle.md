@@ -14,7 +14,7 @@ By default, Tessera matches remembered state by component type, enclosing contro
 Wrap dynamic list items in `key(...)` using a stable business identifier (never a loop index):
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{key, remember, tessera};
 
 #[derive(Clone, PartialEq)]
@@ -53,7 +53,7 @@ Each `expanded` flag now follows its `item.id` across insertions and reorders. K
 Use `remember_with_key(key, init)` when a single local state should reset whenever an input changes:
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{remember_with_key, tessera};
 
 #[tessera]
@@ -81,7 +81,7 @@ Pick the mechanism that matches how long the data should live:
 - **`Model`**: lives as long as its owning `ModelStore` (under `shard_home`, a route keeps its models while covered and closes them when popped or replaced), or the component when used standalone.
 
 ```rust
-use tessera_components::{button::button, text::text};
+use tessera_components::md3::{button::button, text::text};
 use tessera_ui::{retain, tessera};
 
 #[tessera]
@@ -116,7 +116,7 @@ Never perform network I/O, disk writes, or timers directly in a component bodyâ€
 3. **Keyed UI tasks (`launch` / `launch_once`)**: safe to call directly inside a component body. `launch(key, future)` starts `future` once, keeps it alive while `key` stays equal, cancels and restarts it when `key` changes, and cancels it automatically when the component unmounts:
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{Dispatcher, launch, on, remember, tessera};
 
 async fn load_display_name(user_id: u64) -> String {

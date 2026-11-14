@@ -12,7 +12,7 @@ In Tessera, you declare what the UI should be for the current state rather than 
 Annotate a Rust function with `#[tessera]` to define a component. Non-optional parameters become required positional arguments; `Option<T>` parameters become optional chainable setters on the returned configuration handle.
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::tessera;
 
 #[tessera]
@@ -40,7 +40,7 @@ Examples on this page run inside an app's `material_theme()`. See [Material 3 th
 Conditional UI and repetition use ordinary `if`, `match`, and `for`:
 
 ```rust
-use tessera_components::{column::column, text::text};
+use tessera_components::{column::column, md3::text::text};
 use tessera_ui::tessera;
 
 #[tessera]
@@ -60,7 +60,7 @@ When loop items can reorder, insert, or delete while holding local state, wrap e
 Calling a component registers one UI use in call order and returns a configuration handle. Even if you bind handles to local variables and configure them out of order, the resulting UI stays in call order:
 
 ```rust
-use tessera_components::{row::row, text::text};
+use tessera_components::{md3::text::text, row::row};
 use tessera_ui::{Dp, tessera};
 
 #[tessera]
@@ -82,7 +82,7 @@ fn heading() {
 Accept deferred child content with `RenderSlot` (or `RenderSlotWith<T>` when passing a value down to the slot):
 
 ```rust
-use tessera_components::{column::column, text::text};
+use tessera_components::{column::column, md3::text::text};
 use tessera_ui::{RenderSlot, tessera};
 
 #[tessera]
@@ -108,7 +108,7 @@ The parent controls if, when, and in what context a slot renders. Pass closures 
 Pass data down through props and report actions up through `Callback` or `CallbackWith<T, R>`:
 
 ```rust
-use tessera_components::{button::button, text::text};
+use tessera_components::md3::{button::button, text::text};
 use tessera_ui::{Callback, tessera};
 
 #[tessera]

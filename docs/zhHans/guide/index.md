@@ -13,11 +13,8 @@ Tessera 用普通的 Rust 函数和响应式状态描述界面，直接通过 `w
 
 ```rust
 use tessera_components::{
-    button::button,
     column::column,
-    surface::surface,
-    text::text,
-    theme::material_theme,
+    md3::{button::button, surface::surface, text::text, theme::material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
@@ -54,7 +51,7 @@ pub fn app() {
 
 - **`tessera-ui`**：核心运行时，提供 `#[tessera]`、`State` 与 `Model`、`Modifier`、`EntryPoint`、布局/绘制扩展 trait，以及 `UiTest` 测试框架。
 - **`tessera-foundation`**：与设计系统无关的基础原语，包括对齐、`Shape`、手势识别以及布局/语义修饰符。
-- **`tessera-components`**：Material 3 Expressive 控件、主题、布局容器、文本、图片、图标和玻璃效果。
+- **`tessera-components`**：根模块提供与设计系统无关的布局与媒体原语（`row`、`column`、`boxed`、`image`、`pager` 等），Material 3 Expressive 控件与主题位于 `tessera_components::md3`，实验性玻璃效果位于 `tessera_components::experiment`。
 - **`tessera-platform`**：桌面窗口控制与剪贴板服务（由 `ComponentsPackage` 自动安装）。
 - **`tessera-shard`**：页面栈导航（`#[shard]`、`shard_home`、`RouterController`）与路由作用域模型。需要多页面时通过 `cargo add tessera-shard` 添加。
 

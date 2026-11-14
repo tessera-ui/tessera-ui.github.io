@@ -12,7 +12,7 @@ description: 用 remember 管理局部状态、通过状态提升共享数据、
 `remember` 在组件首次挂载时初始化值，并返回一个轻量的 `Copy` 句柄（`State<T>`）：
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{State, remember, tessera};
 
 #[tessera]
@@ -60,7 +60,7 @@ fn counter() {
 当父组件或兄弟组件需要读取、约束同一份数据时，把状态提升到它们最近的共同祖先，让子组件接收当前值并通过回调上报修改：
 
 ```rust
-use tessera_components::{button::button, row::row, text::text};
+use tessera_components::{md3::{button::button, text::text}, row::row};
 use tessera_ui::{CallbackWith, remember, tessera};
 
 #[tessera]
@@ -96,7 +96,7 @@ fn order_line() {
 能从已有状态算出来的值，直接在构建时计算，不要另建一个 `State` 去手动双份同步：
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{State, tessera};
 
 #[derive(Clone, PartialEq)]
@@ -117,7 +117,7 @@ fn remaining_label(tasks: State<Vec<Task>>) {
 当一个页面或功能模块包含多项操作、内部缓存和后台 `Task` 时，为其实现 `ModelInit`。UI 要读取的字段在 `init()` 中用 `State::new(...)` 创建，无需触发刷新的内部字段（缓存、任务句柄）作为普通私有字段由 `&mut self` 方法维护：
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{Model, ModelInit, State, key, tessera};
 
 struct Selection {
@@ -173,7 +173,7 @@ fn contact_list(contacts: Vec<(u64, String)>, selection: Model<Selection>) {
 使用 `provide_context(value, content)` 与 `use_context::<T>()` 为整棵子树提供主题、字号、内容颜色等环境配置，避免层层透传：
 
 ```rust
-use tessera_components::{column::column, text::text, theme::ContentColor};
+use tessera_components::{column::column, md3::{text::text, theme::ContentColor}};
 use tessera_ui::{Color, provide_context, tessera};
 
 #[tessera]

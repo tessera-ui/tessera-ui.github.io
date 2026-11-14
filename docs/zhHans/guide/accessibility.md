@@ -17,7 +17,7 @@ Tessera 会在视觉界面之外同步发布一棵语义树，供屏幕阅读器
 - 无障碍标签和可见文案从同一套多语言目录读取。
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     icon_button::icon_button,
     material_icons::filled,
     radio_button::{radio_button, radio_group},
@@ -58,7 +58,7 @@ fn sort_controls() {
 使用 `SemanticsArgs::default()` 时，`merge_descendants` 默认为 `false`，表示由当前父节点的描述整体替代其后代：
 
 ```rust
-use tessera_components::{row::row, text::text};
+use tessera_components::{md3::text::text, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, SemanticsArgs};
 use tessera_ui::{Modifier, accesskit::Role, tessera};
 
@@ -82,7 +82,7 @@ fn rating(stars: u8) {
 如果容器里的子控件依然需要各自独立操作（比如工具栏），务必显式设 `merge_descendants: true`；若明确要吞掉所有后代语义，也可以使用更直观的 `clear_and_set_semantics(args)`：
 
 ```rust
-use tessera_components::{button::button, row::row, text::text};
+use tessera_components::{md3::{button::button, text::text}, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, SemanticsArgs};
 use tessera_ui::{Callback, Modifier, accesskit::Role, tessera};
 
@@ -117,7 +117,7 @@ fn text_style_toolbar(on_bold: Callback, on_italic: Callback) {
 - 工具栏等组合控件应作为单个 Tab 停靠点，内部用方向键移动：
 
 ```rust
-use tessera_components::{icon_button::icon_button, material_icons::filled, row::row};
+use tessera_components::{md3::{icon_button::icon_button, material_icons::filled}, row::row};
 use tessera_ui::{FocusTraversalPolicy, Modifier, modifier::FocusModifierExt as _, tessera};
 
 #[tessera]

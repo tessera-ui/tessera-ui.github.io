@@ -23,7 +23,7 @@ description: 用 launch 与 spawn 组织归属明确的异步任务，按需取�
 `launch` 把任务绑定到组件调用位置，当 `key` 变化时自动取消旧任务并启动新任务：
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{Dispatcher, launch, on, remember, tessera};
 
 async fn load_display_name(user_id: u64) -> String {
@@ -53,7 +53,7 @@ fn display_name(user_id: u64) {
 点击按钮等动作使用 `spawn` 启动任务，并把返回的 `Task` 存进 `Model` 字段——新请求覆盖字段时自动取消旧请求，模型关闭时也会自动清理进行中的任务：
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{Dispatcher, Model, ModelInit, State, Task, on, spawn, tessera};
 
 async fn fetch_results(query: String) -> Vec<String> {

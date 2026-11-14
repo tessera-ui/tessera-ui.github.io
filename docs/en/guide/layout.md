@@ -17,9 +17,9 @@ Examples on this page assume they sit beneath `material_theme()` with `Component
 use tessera_components::{
     alignment::CrossAxisAlignment,
     column::column,
+    md3::text::text,
     row::row,
     spacer::spacer,
-    text::text,
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
@@ -53,9 +53,9 @@ To push part of a row or column to the far end, insert a weighted `spacer()` (or
 ```rust
 use tessera_components::{
     alignment::CrossAxisAlignment,
+    md3::text::text,
     row::row,
     spacer::spacer,
-    text::text,
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
@@ -80,7 +80,7 @@ fn folder_row() {
 `boxed().alignment(...)` sets the default placement for its children, and individual children can override it with `.align(...)`:
 
 ```rust
-use tessera_components::{alignment::Alignment, boxed::boxed, text::text};
+use tessera_components::{alignment::Alignment, boxed::boxed, md3::text::text};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
@@ -101,7 +101,7 @@ fn layered_label() {
 When items should wrap onto the next line once a row fills up, use `flow_row()` (or `flow_column()` for vertical wrapping):
 
 ```rust
-use tessera_components::{flow_row::flow_row, text::text};
+use tessera_components::{flow_row::flow_row, md3::text::text};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera};
 
@@ -147,7 +147,7 @@ When `max` is `None`, that axis is **unbounded**—common inside scroll viewport
 On mobile devices or edge-to-edge windows, status bars, display cutouts, and the on-screen keyboard can overlap window edges. Full-screen layouts usually delegate this to `scaffold`:
 
 ```rust
-use tessera_components::{scaffold::scaffold, text::text};
+use tessera_components::md3::{scaffold::scaffold, text::text};
 use tessera_ui::{WindowInsets, tessera};
 
 #[tessera]

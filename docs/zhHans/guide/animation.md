@@ -23,7 +23,7 @@ Tessera 的动画分成两层：标准控件的展开、收起与吸附动效由
 下面这个标签会在 300 毫秒内从 0% 数到 100%：
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{launch_once, remember, tessera, with_frame_time};
 
 #[tessera]
@@ -58,7 +58,7 @@ fn timed_label() {
 把动画目标作为 `key` 传给 `launch(target, ...)`。只要目标变化——哪怕还在半路上——Tessera 会立刻取消旧任务，并从当前状态里的中间值接着转向新目标：
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Modifier, launch, remember, tessera, with_frame_time};
 

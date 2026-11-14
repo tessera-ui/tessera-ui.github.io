@@ -117,7 +117,7 @@ To merge the top app bar into the desktop window title bar:
 2. Mark the bar with `.window_chrome(true)`:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     app_bar::top_app_bar,
     theme::{MaterialTheme, material_theme},
 };
@@ -138,7 +138,7 @@ On macOS this keeps native traffic-light window buttons while adding a drag regi
 For custom window buttons or quit actions, depend on `tessera-platform` (`cargo add tessera-platform`) and call `tessera_platform::window::{minimize, maximize, toggle_maximize, close}`:
 
 ```rust
-use tessera_components::{button::button, row::row, text::text};
+use tessera_components::{md3::{button::button, text::text}, row::row};
 use tessera_platform::window;
 use tessera_ui::tessera;
 

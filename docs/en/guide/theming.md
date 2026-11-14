@@ -12,9 +12,11 @@ Place `material_theme()` at the root of your UI tree:
 ```rust
 use tessera_components::{
     column::column,
+    md3::{
+        text::text,
+        theme::{MaterialTheme, material_theme},
+    },
     modifier::ModifierExt as _,
-    text::text,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Color, Dp, Modifier, tessera, use_context};
@@ -42,7 +44,7 @@ For custom schemes or type overrides, construct a `MaterialColorScheme` directly
 Tessera does not switch themes behind your back based on OS settings. Store the appearance choice in state and read that state *inside* `.theme(...)`:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     button::button,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -105,7 +107,7 @@ Use `outline` / `outline_variant` for borders and `on_surface_variant` for secon
 `text` and `icon` inherit `ContentColor` from context (falling back to `on_surface`). Note the difference between a plain background modifier and `surface()`: `Modifier::background` only paints pixels, whereas `surface()` looks up `content_color_for(fill, &scheme)` and automatically provides the matching `ContentColor` to its children:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     surface::{SurfaceStyle, surface},
     text::text,
     theme::MaterialTheme,
@@ -138,7 +140,13 @@ If you pass a custom non-scheme color to `surface()`, pass `.content_color(...)`
 `theme.shapes` provides rounded corner tokens (`extra_small`, `small`, `medium`, `large`, `large_increased`, `extra_large`). Whenever a container combines shadow, fill, border, and clipping, share the same `Shape` across all four so corners line up cleanly:
 
 ```rust
-use tessera_components::{modifier::{ModifierExt as _, ShadowArgs}, theme::MaterialTheme};
+use tessera_components::{
+    md3::{
+        modifier::{ModifierExt as _, ShadowArgs},
+        theme::MaterialTheme,
+    },
+    modifier::ModifierExt as _,
+};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier};
 
@@ -162,20 +170,20 @@ fn panel_modifier(theme: &MaterialTheme) -> Modifier {
 
 Notice `shadow(...)` stays *outside* `clip_shape(shape)` so the shadow can spread beyond the rounded edge while children inside are clipped to it.
 
-## Glass surfaces (`fluid_glass`)
+## Glass surfaces (`experiment::hig::glass`)
 
-`fluid_glass()` samples the scene rendered behind it to draw a tinted, blurred, refractive surface:
+`glass()` in `tessera_components::experiment::hig::glass` samples the scene rendered behind it to draw a tinted, blurred, refractive surface:
 
 ```rust
 use tessera_components::{
-    fluid_glass::{GlassMaterial, fluid_glass},
-    text::text,
+    experiment::hig::glass::{GlassMaterial, glass},
+    md3::text::text,
 };
 use tessera_ui::{Dp, tessera};
 
 #[tessera]
 fn glass_label() {
-    fluid_glass()
+    glass()
         .material(GlassMaterial::Regular)
         .padding(Dp(16.0))
         .child(|| text("Content on glass"));
@@ -186,7 +194,7 @@ fn glass_label() {
 - `GlassMaterial::Clear`: more transparent, keeping backdrop color and contrast.
 - `GlassMaterial::Custom`: refractive lens without default blur or tint adjustments.
 
-You can override `appearance` (`Light` / `Dark`) or `blur_radius` (`Dp(0.0)` disables backdrop blur). Because backdrop sampling copies behind-the-glass pixels, place `fluid_glass` where something visual sits behind it and check text contrast across light and dark backdrops.
+You can override `appearance` (`GlassAppearance::Light` by default, or `Dark`) or `blur_radius` (`Dp(0.0)` disables backdrop blur). Because backdrop sampling copies behind-the-glass pixels, place `glass` where something visual sits behind it and check text contrast across light and dark backdrops.
 
 ## Next steps
 

@@ -16,7 +16,7 @@ cargo add tessera-shard
 Here is a minimal two-screen flow using `#[shard]` and `use_router()`:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     button::button,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -72,9 +72,11 @@ Call `use_router()` during build inside any component rendered beneath `shard_ho
 use tessera_components::{
     boxed::boxed,
     column::column,
-    navigation_bar::{navigation_bar, navigation_bar_item},
-    text::text,
-    theme::{MaterialTheme, material_theme},
+    md3::{
+        navigation_bar::{navigation_bar, navigation_bar_item},
+        text::text,
+        theme::{MaterialTheme, material_theme},
+    },
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_shard::{RouterController, shard, shard_home};
@@ -138,7 +140,7 @@ Inspect the stack with `len()`, `is_empty()`, `last()`, and `current_is::<D>()`.
 Because covered routes are not mounted in the UI tree, component-local `remember` state resets when another route pushes on top. To keep screen state across navigation pushes, inject a `Model<T>`:
 
 ```rust
-use tessera_components::{button::button, text::text};
+use tessera_components::md3::{button::button, text::text};
 use tessera_shard::shard;
 use tessera_ui::{Model, ModelInit, State};
 
@@ -177,7 +179,7 @@ For state that must survive `reset` across top-level tabs, own a `Model` (or `St
 `launch` tasks inside a `#[shard]` function stop when another route covers the page and restart when returning. Check your route model before fetching again so completed loads do not repeat:
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_shard::shard;
 use tessera_ui::{Dispatcher, Model, ModelInit, State, launch, on};
 

@@ -13,11 +13,8 @@ A component is a Rust function marked with `#[tessera]`. Calling a component dec
 
 ```rust
 use tessera_components::{
-    button::button,
     column::column,
-    surface::surface,
-    text::text,
-    theme::material_theme,
+    md3::{button::button, surface::surface, text::text, theme::material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
@@ -54,7 +51,7 @@ New projects depend on the first three crates by default:
 
 - **`tessera-ui`**: the core runtime—`#[tessera]`, `State` and `Model`, `Modifier`, `EntryPoint`, layout/draw extension traits, and `UiTest`.
 - **`tessera-foundation`**: design-system-agnostic primitives—alignment, `Shape`, gesture recognizers, and layout/semantics modifiers.
-- **`tessera-components`**: Material 3 Expressive controls, themes, containers, text, images, icons, and glass effects.
+- **`tessera-components`**: design-system-agnostic layout and media primitives (`row`, `column`, `boxed`, `image`, `pager`) at the crate root, Material 3 Expressive controls and theming under `tessera_components::md3`, and experimental glass under `tessera_components::experiment`.
 - **`tessera-platform`**: desktop window controls and clipboard services (installed by `ComponentsPackage`).
 - **`tessera-shard`**: screen navigation (`#[shard]`, `shard_home`, `RouterController`) with route-scoped models. Add with `cargo add tessera-shard`.
 

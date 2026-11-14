@@ -12,7 +12,7 @@ Component functions run again whenever the UI updates, so plain local variables 
 `remember` initializes a value once when the component first mounts and returns a lightweight, `Copy` handle (`State<T>`):
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{State, remember, tessera};
 
 #[tessera]
@@ -60,7 +60,7 @@ Prefer short `with(|v| ...)` borrows for large values, and use `set_if_changed` 
 When multiple components need to read or constrain the same value, lift ownership to their lowest common ancestor: pass the current value (or handle) down and accept a callback for edits.
 
 ```rust
-use tessera_components::{button::button, row::row, text::text};
+use tessera_components::{md3::{button::button, text::text}, row::row};
 use tessera_ui::{CallbackWith, remember, tessera};
 
 #[tessera]
@@ -96,7 +96,7 @@ For ongoing editing or scrolling, pass a component controller (`TextInputControl
 Compute derived values directly during build rather than mirroring them in a second `State`:
 
 ```rust
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{State, tessera};
 
 #[derive(Clone, PartialEq)]
@@ -117,7 +117,7 @@ fn remaining_label(tasks: State<Vec<Task>>) {
 For a screen or feature with multiple operations, internal caches, and async `Task` handles, implement `ModelInit`. Put reactive fields in `State::new(...)` inside `init()`, and keep non-UI fields (caches, request handles) as plain private fields updated through `&mut self` methods:
 
 ```rust
-use tessera_components::{button::button, column::column, text::text};
+use tessera_components::{column::column, md3::{button::button, text::text}};
 use tessera_ui::{Model, ModelInit, State, key, tessera};
 
 struct Selection {
@@ -173,7 +173,7 @@ Always create model states with `State::new` inside `ModelInit::init` or `ModelS
 Use `provide_context(value, content)` and `use_context::<T>()` to pass subtree-wide visual defaults (themes, text styles, content colors) without threading arguments through every intermediate component:
 
 ```rust
-use tessera_components::{column::column, text::text, theme::ContentColor};
+use tessera_components::{column::column, md3::{text::text, theme::ContentColor}};
 use tessera_ui::{Color, provide_context, tessera};
 
 #[tessera]

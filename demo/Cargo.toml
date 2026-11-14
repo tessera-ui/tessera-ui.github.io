@@ -16,10 +16,10 @@ path = "src/main.rs"
 # Every Tessera crate comes from the same pinned commit. scripts/build-demo.ts
 # reads this revision to install the matching cargo-tessera.
 [dependencies]
-tessera-ui = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
-tessera-components = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
-tessera-foundation = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
-tessera-i18n = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+tessera-ui = { git = "https://github.com/tessera-ui/tessera", rev = "42533053582c3ba1644bd2c0da855b49f46ac576" }
+tessera-components = { git = "https://github.com/tessera-ui/tessera", rev = "42533053582c3ba1644bd2c0da855b49f46ac576" }
+tessera-foundation = { git = "https://github.com/tessera-ui/tessera", rev = "42533053582c3ba1644bd2c0da855b49f46ac576" }
+tessera-i18n = { git = "https://github.com/tessera-ui/tessera", rev = "42533053582c3ba1644bd2c0da855b49f46ac576" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
 tokio = "1"
@@ -37,7 +37,7 @@ web-sys = { version = "0.3.107", features = [
 ] }
 
 [build-dependencies]
-tessera-build = { git = "https://github.com/tessera-ui/tessera", rev = "afe80088bb72288ea927b7809c3cec6b1697aa9d" }
+tessera-build = { git = "https://github.com/tessera-ui/tessera", rev = "42533053582c3ba1644bd2c0da855b49f46ac576" }
 
 # Keep the demo out of any parent workspace.
 [workspace]

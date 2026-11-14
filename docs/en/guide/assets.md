@@ -43,10 +43,10 @@ Directory names map to lowercase module names (escaping Rust 2024 keywords with 
 
 ## Images and vector icons
 
-`Painter` accepts generated `Asset` constants, path/URL strings, encoded bytes, `ImageData`, and `ImageVectorData`. `tessera_components::material_icons` also ships generated Material icon constants across `filled`, `outlined`, `round`, `sharp`, and `two_tone` styles:
+`Painter` accepts generated `Asset` constants, path/URL strings, encoded bytes, `ImageData`, and `ImageVectorData`. `tessera_components::md3::material_icons` also ships generated Material icon constants across `filled`, `outlined`, `round`, `sharp`, and `two_tone` styles:
 
 ```rust
-use tessera_components::{icon::icon, material_icons::filled};
+use tessera_components::md3::{icon::icon, material_icons::filled};
 use tessera_ui::tessera;
 
 #[tessera]
@@ -95,7 +95,7 @@ Use `Resource::load(source, decode)` for JSON, text, or binary payloads, where `
 ```rust
 use std::{io, sync::Arc};
 
-use tessera_components::text::text;
+use tessera_components::md3::text::text;
 use tessera_ui::{LoadState, Resource, remember, tessera};
 
 fn decode_text(bytes: Arc<[u8]>) -> io::Result<String> {

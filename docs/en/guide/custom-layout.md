@@ -120,7 +120,7 @@ Key layout contracts:
 Native controls always measure and edit in local `Px`. To scale an interactive subtree uniformly (for example, fitting a specification card into a preview area), wrap a single child in `tessera_ui::scaled_box(scale)`:
 
 ```rust
-use tessera_components::{column::column, text::text};
+use tessera_components::{column::column, md3::text::text};
 use tessera_ui::{scaled_box, tessera};
 
 #[tessera]

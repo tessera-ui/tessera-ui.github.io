@@ -5,7 +5,7 @@ description: Record custom DrawCommand and ComputeCommand payloads, register WGS
 
 # Custom drawing and shaders
 
-When built-in modifiers (`background`, `border`, `shadow`, `clip_shape`), `Painter` images/SVGs, and `fluid_glass` do not cover a visual effect, write a typed command paired with a `wgpu` pipeline and register it via `RenderModule`.
+When built-in modifiers (`background`, `border`, `shadow`, `clip_shape`), `Painter` images/SVGs, and `experiment::hig::glass` do not cover a visual effect, write a typed command paired with a `wgpu` pipeline and register it via `RenderModule`.
 
 ## Recording a draw command from a component
 

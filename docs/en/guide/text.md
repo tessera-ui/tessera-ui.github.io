@@ -14,7 +14,7 @@ Examples below assume `material_theme()` above them and `ComponentsPackage` regi
 Pick a role from `theme.typography` so headings, labels, and body copy scale coherently with the theme:
 
 ```rust
-use tessera_components::{column::column, text::text, theme::MaterialTheme};
+use tessera_components::{column::column, md3::{text::text, theme::MaterialTheme}};
 use tessera_ui::{tessera, use_context};
 
 #[tessera]
@@ -38,7 +38,7 @@ When `style` is omitted, `text` uses any `TextStyle` provided in context (such a
 `MaterialTypography` includes `display`, `headline`, `title`, `body`, and `label` in `large`, `medium`, and `small` sizes (plus `.emphasized()`). To tweak one property without losing the role's scale, copy from the theme role:
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     text::text,
     theme::{MaterialTheme, TextStyle},
 };
@@ -71,7 +71,7 @@ For registering custom fonts and Unicode fallback ranges, see [Assets, images, a
 ```rust
 use tessera_components::{
     column::column,
-    text_field::{TextFieldLineLimit, text_field},
+    md3::text_field::{TextFieldLineLimit, text_field},
 };
 use tessera_ui::tessera;
 
@@ -116,11 +116,13 @@ Pass a remembered `TextInputController` when actions outside the field need to r
 
 ```rust
 use tessera_components::{
-    button::button,
     column::column,
-    text::text,
-    text_field::text_field,
-    text_input::TextInputController,
+    md3::{
+        button::button,
+        text::text,
+        text_field::text_field,
+        text_input::TextInputController,
+    },
 };
 use tessera_ui::{Dp, remember, tessera};
 

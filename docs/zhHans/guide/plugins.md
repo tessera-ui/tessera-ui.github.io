@@ -8,7 +8,7 @@ description: 通过 Plugin 接入宿主生命周期、用 TesseraPackage 封装�
 当应用需要接入组件树之外的能力——原生 SDK、平台句柄或随宿主启停的服务时，将其封装成 `Plugin`。插件由当前 `RuntimeSession` 持有，接收宿主生命周期回调，并能在会话任意位置按 Rust 类型访问。
 
 ```rust
-use tessera_components::{ComponentsPackage, text::text, theme::material_theme};
+use tessera_components::{ComponentsPackage, md3::{text::text, theme::material_theme}};
 use tessera_ui::{EntryPoint, Plugin, tessera, with_plugin};
 
 struct GreetingPlugin {

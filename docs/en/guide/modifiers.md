@@ -10,7 +10,7 @@ A `Modifier` decorates or changes how a UI node behaves—its size, padding, bac
 Here is a rounded status badge styled with one modifier chain:
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, text::text, theme::MaterialTheme};
+use tessera_components::{md3::{text::text, theme::MaterialTheme}, modifier::ModifierExt as _};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 
@@ -36,7 +36,8 @@ fn status_badge() {
 | Trait | Methods it provides |
 | --- | --- |
 | `tessera_foundation::modifier::ModifierExt` | Sizing (`size`, `width`, `height`, `fill_max_*`, `required_*`, `size_in`, `constrain`), `padding*`, `offset`, `alpha`, `clip_to_bounds`, `clip_shape`, `weight`, `align`, `window_insets_*`, `draggable`, `block_touch_propagation`, `window_drag_region`, `semantics`, `clear_and_set_semantics` |
-| `tessera_components::modifier::ModifierExt` | Material visual and interactive modifiers: `background*`, `border*`, `shadow`, `vertical_scroll`, `horizontal_scroll`, `scroll`, `clickable`, `toggleable`, `selectable` |
+| `tessera_components::modifier::ModifierExt` | Visual and stateful interaction modifiers: `background*`, `border*`, `clickable`, `toggleable`, `selectable` |
+| `tessera_components::md3::modifier::ModifierExt` | Material scrolling and elevation shadows: `vertical_scroll`, `horizontal_scroll`, `scroll`, `shadow` |
 | `tessera_ui::modifier::FocusModifierExt` | Focus registration and geometry observers: `focusable`, `focus_requester`, `focus_properties`, `preferred_tab_stop`, `focus_group`, `focus_scope`, `focus_restorer`, `focus_traversal_policy`, `on_focus_changed`, `on_globally_positioned*`, `on_layout_coordinates`, `on_local_to_window` |
 | `tessera_ui::modifier::CursorModifierExt` | `hover_cursor_icon` |
 
@@ -105,7 +106,7 @@ let content_surface = Modifier::new()
 When writing reusable components, accept an `Option<Modifier>` parameter and start your root modifier chain from `modifier.unwrap_or_default()`:
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, row::row, text::text, theme::MaterialTheme};
+use tessera_components::{md3::{text::text, theme::MaterialTheme}, modifier::ModifierExt as _, row::row};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 
@@ -139,7 +140,7 @@ Putting the caller's `modifier` first ensures caller spacing and sizing sit *out
 If the same combination of modifiers keeps showing up, package it in an extension trait on `Modifier`:
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, theme::MaterialTheme};
+use tessera_components::{md3::theme::MaterialTheme, modifier::ModifierExt as _};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 

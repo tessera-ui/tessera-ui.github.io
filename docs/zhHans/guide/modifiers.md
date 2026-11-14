@@ -10,7 +10,7 @@ description: 认识各类 Modifier 扩展 trait，并理解链式顺序如何决
 比如用一条链做出带圆角背景和内边距的标签：
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, text::text, theme::MaterialTheme};
+use tessera_components::{md3::{text::text, theme::MaterialTheme}, modifier::ModifierExt as _};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 
@@ -36,7 +36,8 @@ fn status_badge() {
 | Trait | 提供的能力 |
 | --- | --- |
 | `tessera_foundation::modifier::ModifierExt` | 尺寸与约束（`size`、`width`、`height`、`fill_max_*`、`required_*`、`size_in`、`constrain`）、`padding*`、`offset`、`alpha`、`clip_to_bounds`、`clip_shape`、`weight`、`align`、`window_insets_*`、`draggable`、`block_touch_propagation`、`window_drag_region`、`semantics`、`clear_and_set_semantics` |
-| `tessera_components::modifier::ModifierExt` | Material 视觉与交互修饰符：`background*`、`border*`、`shadow`、`vertical_scroll`、`horizontal_scroll`、`scroll`、`clickable`、`toggleable`、`selectable` |
+| `tessera_components::modifier::ModifierExt` | 基础绘制与状态交互修饰符：`background*`、`border*`、`clickable`、`toggleable`、`selectable` |
+| `tessera_components::md3::modifier::ModifierExt` | Material 滚动与高度阴影：`vertical_scroll`、`horizontal_scroll`、`scroll`、`shadow` |
 | `tessera_ui::modifier::FocusModifierExt` | 焦点与几何位置观察：`focusable`、`focus_requester`、`focus_properties`、`preferred_tab_stop`、`focus_group`、`focus_scope`、`focus_restorer`、`focus_traversal_policy`、`on_focus_changed`、`on_globally_positioned*`、`on_layout_coordinates`、`on_local_to_window` |
 | `tessera_ui::modifier::CursorModifierExt` | 鼠标悬停光标 `hover_cursor_icon` |
 
@@ -105,7 +106,7 @@ let content_surface = Modifier::new()
 写自己的可复用组件时，留一个 `modifier: Option<Modifier>` 参数，并把调用方传入的链放在最前面：
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, row::row, text::text, theme::MaterialTheme};
+use tessera_components::{md3::{text::text, theme::MaterialTheme}, modifier::ModifierExt as _, row::row};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 
@@ -139,7 +140,7 @@ fn tag_row() {
 一组修饰符搭配用得频繁了，可以给 `Modifier` 写个扩展 trait 起个业务名字：
 
 ```rust
-use tessera_components::{modifier::ModifierExt as _, theme::MaterialTheme};
+use tessera_components::{md3::theme::MaterialTheme, modifier::ModifierExt as _};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, tessera, use_context};
 

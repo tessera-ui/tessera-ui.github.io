@@ -1,13 +1,10 @@
 export const appSnippet = `
 use tessera_components::{
     alignment::{CrossAxisAlignment, MainAxisAlignment},
-    button::button,
     column::column,
-    modifier::ModifierExt as _,
-    surface::surface,
-    text::text,
-    theme::material_theme,
+    md3::{button::button, surface::surface, text::text, theme::material_theme},
 };
+use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier, remember, tessera};
 
 #[tessera]

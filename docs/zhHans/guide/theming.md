@@ -12,9 +12,11 @@ description: 用 material_theme 为应用统一提供配色、排版和圆角形
 ```rust
 use tessera_components::{
     column::column,
+    md3::{
+        text::text,
+        theme::{MaterialTheme, material_theme},
+    },
     modifier::ModifierExt as _,
-    text::text,
-    theme::{MaterialTheme, material_theme},
 };
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Color, Dp, Modifier, tessera, use_context};
@@ -42,7 +44,7 @@ fn app() {
 Tessera 不会私自跟随系统外观自动切色。把当前选择放进状态里，并在 `.theme(...)` 闭包内部读取它：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     button::button,
     text::text,
     theme::{MaterialTheme, material_theme},
@@ -105,7 +107,7 @@ Material 的颜色角色是成对设计的，确保浅色和深色下文字都�
 `text` 和 `icon` 会自动从上下文读取 `ContentColor`（取不到则退回到 `on_surface`）。这里要注意区分 `Modifier::background` 和 `surface()` 组件：`background` 修饰符只管涂颜色，而 `surface()` 会通过 `content_color_for(fill, &scheme)` 自动把配套的 `ContentColor` 提供给子组件。所以下面这段文字会自动用上 `on_primary_container`：
 
 ```rust
-use tessera_components::{
+use tessera_components::md3::{
     surface::{SurfaceStyle, surface},
     text::text,
     theme::MaterialTheme,
@@ -138,7 +140,13 @@ fn backup_banner() {
 `theme.shapes` 提供了一组圆角 token（`extra_small`、`small`、`medium`、`large`、`large_increased`、`extra_large`）。当一个容器同时用到阴影、背景填充、边框和内容裁剪时，让这四者共用同一个 `Shape`，边缘才能严丝合缝：
 
 ```rust
-use tessera_components::{modifier::{ModifierExt as _, ShadowArgs}, theme::MaterialTheme};
+use tessera_components::{
+    md3::{
+        modifier::{ModifierExt as _, ShadowArgs},
+        theme::MaterialTheme,
+    },
+    modifier::ModifierExt as _,
+};
 use tessera_foundation::modifier::ModifierExt as _;
 use tessera_ui::{Dp, Modifier};
 
@@ -162,20 +170,20 @@ fn panel_modifier(theme: &MaterialTheme) -> Modifier {
 
 注意 `shadow(...)` 写在 `clip_shape(shape)` 外面：阴影才能向轮廓外扩散，而里面的子内容会被干净地裁在圆角以内。
 
-## 玻璃材质（`fluid_glass`）
+## 玻璃材质（`experiment::hig::glass`）
 
-`fluid_glass()` 会采样它背后已经画好的场景像素，叠加模糊、色调和边缘折射：
+`tessera_components::experiment::hig::glass::glass()` 会采样它背后已经画好的场景像素，叠加模糊、色调和边缘折射：
 
 ```rust
 use tessera_components::{
-    fluid_glass::{GlassMaterial, fluid_glass},
-    text::text,
+    experiment::hig::glass::{GlassMaterial, glass},
+    md3::text::text,
 };
 use tessera_ui::{Dp, tessera};
 
 #[tessera]
 fn glass_label() {
-    fluid_glass()
+    glass()
         .material(GlassMaterial::Regular)
         .padding(Dp(16.0))
         .child(|| text("Content on glass"));
@@ -186,7 +194,7 @@ fn glass_label() {
 - `GlassMaterial::Clear`：更通透，保留较多背景色彩和对比度。
 - `GlassMaterial::Custom`：只保留折射透镜，不套默认的模糊与调色参数。
 
-可以通过 `appearance` 显式指定浅色或深色处理，或用 `blur_radius(Dp(0.0))` 关掉背景模糊。由于它会读取背后像素，使用前确保它下方有内容可透出，并留意文字在亮/暗背景下的可读性。
+可以通过 `appearance` 显式指定浅色（`GlassAppearance::Light`，默认）或深色处理，或用 `blur_radius(Dp(0.0))` 关掉背景模糊。由于它会读取背后像素，使用前确保它下方有内容可透出，并留意文字在亮/暗背景下的可读性。
 
 ## 下一步
 
