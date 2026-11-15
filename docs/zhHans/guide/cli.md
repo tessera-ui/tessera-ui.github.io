@@ -20,15 +20,18 @@ description: cargo tessera 全部子命令、静态边界检查错误码（T0001
 - **`cargo tessera dev`**：监听改动并重编重启桌面应用（`-p`、`-r`/`--release`、`-v`、`--top`、`--debug-dirty-overlay`、`--profiling-output FILE`、`--asset-backend embed\|platform`）。
 - **`cargo tessera build`**：检查边界后编译原生二进制（`-r`、`-p`、`-t`/`--target`、`--bin`、`--profiling-output`、`--debug-dirty-overlay`、`--asset-backend`）。
 - **`cargo tessera package`**：以平台资源模式构建并通过 `cargo-packager` 打桌面安装包（`-r`、`-p`、`-t`、`--bin`、`-f`/`--formats`）。
-- **`cargo tessera android {init, build, dev, rust-build}`**：初始化与同步 Gradle 宿主、构建 APK/AAB（`--format`、`--arch`），以及设备实时开发（`--device`）。
-- **`cargo tessera ios build`**：在 macOS 上构建模拟器 `.app` 或真机 `.ipa`（`--device`、`--signing-identity`、`--provisioning-profile`、`--profiling-output`）。
-- **`cargo tessera web {init, build, dev}`**：初始化 Web 宿主、编译 WebAssembly（`-r`、`-p`、`-F`/`--features`）或在本地启动开发服务（`--port`）。
+- **`cargo tessera android init`**：在 `gen/android/` 生成 Gradle 工程（`--force`、`--skip-targets-install`）。
+- **`cargo tessera android build`**：构建 APK 或 AAB（`-p`、`-r`、`--arch arm64|arm|x86|x86_64`、`-f`/`--format apk|aab`、`--profiling-output`、`--debug-dirty-overlay`、`--asset-backend`）。
+- **`cargo tessera android dev`**：安装到设备并运行，源码变化时重新部署（必须指定 `-d`/`--device`，其余参数同 `build`，但没有 `--format`）。
+- **`cargo tessera apple init`**：在 macOS 上于 `gen/apple/` 生成 Xcode 工程（`-p`、`--bin`、`--force`）。
+- **`cargo tessera ios build`**：构建模拟器 `.app`，加 `--device` 时构建真机 IPA（`-p`、`-r`、`--bin`、`--profiling-output`）。
+- **`cargo tessera web {init, build, dev}`**：初始化 Web 宿主、编译 WebAssembly（`-r`、`-p`、`-F`/`--features`），或在本地托管 `gen/web/` 并在改动后重新编译（`-r`、`-p`、`-F`/`--features`、`--port`）。
 
 ## 无头会话与性能分析
 
 - **`cargo tessera headless`**：启动 JSONL 离屏测试管理进程（`-p`、`-r`、`--width`、`--height`、`--frame-time-ms`、`--profiling-output`）。
 - **`cargo tessera profiling analyze PATH`**：汇总分析桌面/离屏性能记录（`-v`、`--top N`、`--min-count N`、`--skip-invalid`、`--csv FILE`）。
-- **`cargo tessera profiling analyze-android --package ID`**：通过 `adb` 拉取 Android 性能记录并分析（`-d`/`--device`、`--remote-path`、`--pull-to` 及分析参数）。
+- **`cargo tessera profiling analyze-android`**：通过 `adb` 拉取 Android 性能记录并分析（`--app-id ID`，默认取 `-p` 所选包的 `[app] identifier`；`-d`/`--device`、`--remote-path`、`--pull-to` 及分析参数）。
 
 ## 静态检查与修复（`check` / `fix`）
 

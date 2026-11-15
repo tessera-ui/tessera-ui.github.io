@@ -20,15 +20,18 @@ description: Reference for cargo tessera commands, call-boundary error codes (T0
 - **`cargo tessera dev`**: watches and rebuilds/restarts desktop apps (`-p`, `-r`/`--release`, `-v`, `--top`, `--debug-dirty-overlay`, `--profiling-output FILE`, `--asset-backend embed\|platform`).
 - **`cargo tessera build`**: checks boundaries and builds native binaries (`-r`, `-p`, `-t`/`--target`, `--bin`, `--profiling-output`, `--debug-dirty-overlay`, `--asset-backend`).
 - **`cargo tessera package`**: builds with platform assets and invokes `cargo-packager` (`-r`, `-p`, `-t`, `--bin`, `-f`/`--formats`).
-- **`cargo tessera android {init, build, dev, rust-build}`**: Gradle project sync, APK/AAB builds (`--format`, `--arch`), and live device deployment (`--device`).
-- **`cargo tessera ios build`**: builds simulator `.app` or device `.ipa` on macOS (`--device`, `--signing-identity`, `--provisioning-profile`, `--profiling-output`).
-- **`cargo tessera web {init, build, dev}`**: initializes browser host, builds WebAssembly (`-r`, `-p`, `-F`/`--features`), or serves `gen/web/` locally (`--port`).
+- **`cargo tessera android init`**: generates the Gradle project in `gen/android/` (`--force`, `--skip-targets-install`).
+- **`cargo tessera android build`**: builds an APK or AAB (`-p`, `-r`, `--arch arm64|arm|x86|x86_64`, `-f`/`--format apk|aab`, `--profiling-output`, `--debug-dirty-overlay`, `--asset-backend`).
+- **`cargo tessera android dev`**: installs and runs on a device, redeploying when sources change (`-d`/`--device` required, plus the `build` flags except `--format`).
+- **`cargo tessera apple init`**: generates the Xcode project in `gen/apple/` on macOS (`-p`, `--bin`, `--force`).
+- **`cargo tessera ios build`**: builds a simulator `.app`, or a device IPA with `--device` (`-p`, `-r`, `--bin`, `--profiling-output`).
+- **`cargo tessera web {init, build, dev}`**: initializes the browser host, builds WebAssembly (`-r`, `-p`, `-F`/`--features`), or serves `gen/web/` locally and rebuilds on change (`-r`, `-p`, `-F`/`--features`, `--port`).
 
 ## Headless and profiling commands
 
 - **`cargo tessera headless`**: runs the JSONL offscreen session supervisor (`-p`, `-r`, `--width`, `--height`, `--frame-time-ms`, `--profiling-output`).
 - **`cargo tessera profiling analyze PATH`**: summarizes desktop/headless JSONL profiles (`-v`, `--top N`, `--min-count N`, `--skip-invalid`, `--csv FILE`).
-- **`cargo tessera profiling analyze-android --package ID`**: pulls profiler output via `adb` and analyzes it (`-d`/`--device`, `--remote-path`, `--pull-to`, plus analysis flags).
+- **`cargo tessera profiling analyze-android`**: pulls profiler output via `adb` and analyzes it (`--app-id ID`, defaulting to the `[app] identifier` of the package selected with `-p`; `-d`/`--device`, `--remote-path`, `--pull-to`, plus analysis flags).
 
 ## Static checking (`check` and `fix`)
 

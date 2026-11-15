@@ -23,8 +23,8 @@ Every native target requires Rust 1.98+, a native C/C++ linker, and a supported 
 | Windows | Windows build tools/SDK; Direct3D 12-capable GPU and driver |
 | macOS | Apple Xcode/Command Line Tools; Metal-capable GPU and driver |
 | Linux | C/C++ toolchain, X11 or Wayland client libraries, `libxkbcommon`, and a Vulkan-capable GPU driver |
-| Android | Android SDK and NDK, JDK for Gradle, and a device/emulator (`minSdk` defaults to `24`) |
-| iOS | macOS with Xcode and iOS SDK (`IPHONEOS_DEPLOYMENT_TARGET` defaults to `15.0`) |
+| Android | Android SDK and NDK, a JDK supported by Gradle 8.14 (17 or 21), and a device/emulator (the generated project sets `minSdk` to `24`) |
+| iOS | macOS with Xcode, the iOS SDK, and XcodeGen (the generated Xcode project targets iOS `15.0`) |
 | Web | `wasm32-unknown-unknown` target, a WebGPU-enabled browser in a secure context (HTTPS or `localhost`), and Binaryen 110+ (`wasm-opt`) for release builds |
 
 ## Desktop notes
@@ -42,7 +42,7 @@ Every native target requires Rust 1.98+, a native C/C++ linker, and a supported 
 
 Web builds render via WebGPU into a `<canvas>` (no WebGL fallback and no DOM tree). `WebConfig::with_canvas_id(env!("CARGO_CRATE_NAME"))` matches the canvas ID in `gen/web/index.html`.
 
-Because browsers do not expose system fonts, `ComponentsPackage` bundles a startup Roboto font and loads extra Roboto / Noto Sans SC subsets from a CDN stylesheet—ensure your deployment CSP permits those requests or register bundled `Fonts` directly (see [Assets, images, and fonts](/guide/assets#registering-fonts)).
+Because browsers do not expose system fonts, `ComponentsPackage` bundles a startup Roboto font and loads extra Roboto / Noto Sans SC subsets from a CDN—ensure your deployment CSP permits those requests or register bundled `Fonts` directly (see [Assets, images, and fonts](/guide/assets#registering-fonts)).
 
 ## Accessibility support
 

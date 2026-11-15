@@ -7,13 +7,14 @@ description: Run asynchronous work tied to the component or model that owns its 
 
 Network requests, disk I/O, and heavy computation take time, whereas component builds must stay fast. Run asynchronous work as tasks and write results back into `State`. Every task belongs to a handle or build call—dropping the handle or changing the key cancels the task automatically.
 
-`tessera_ui` provides four primitives:
+`tessera_ui` provides five primitives:
 
 | API | Use it for |
 | --- | --- |
 | `launch(key, future)` | Work tied to a mounted component and its current `key` |
 | `launch_once(future)` | Work started once while the component stays mounted |
 | `spawn(dispatcher, future)` | Work started from an action; returns a `Task` handle you own |
+| `spawn_local(future)` | Like `spawn`, for `!Send` futures run on the current UI session |
 | `on(dispatcher, future)` | Running part of a task on another dispatcher and awaiting its result |
 
 See [Identity, lifecycle, and effects](/guide/lifecycle) for why side effects stay out of plain build logic.
@@ -124,7 +125,7 @@ Call `Task::detach()` only when fire-and-forget work should outlive its handle; 
 | `Dispatcher::Io` | Blocking-capable worker threads with a Tokio 1 runtime context |
 | `Dispatcher::Default` | Compute thread pool sized for CPU work |
 
-`spawn` requires `Send + 'static` futures; `launch` and `launch_once` allow `!Send` futures. On native targets every dispatcher provides a Tokio 1 runtime context (`tokio = "1"` works out of the box); on the web, all dispatchers run on the browser's event loop.
+`spawn` requires `Send + 'static` futures; `launch`, `launch_once`, and `spawn_local` allow `!Send` futures. `spawn_local` can be called from any code, such as a callback or model method, while a UI session is current. On native targets every dispatcher provides a Tokio 1 runtime context (`tokio = "1"` works out of the box); on the web, all dispatchers run on the browser's event loop.
 
 Running the outer task on `Dispatcher::Ui` and offloading slow work via `on(Dispatcher::Io, ...)` keeps state writes on the UI thread, where cancellation prevents stale writes immediately before `.await` resumes. When updating `State<T>` (`T: Send`) directly from another dispatcher, synchronization happens at frame boundaries—never block the UI thread waiting on a thread that is accessing UI state.
 

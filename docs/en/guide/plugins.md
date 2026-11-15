@@ -84,7 +84,14 @@ cargo tessera plugin new hello-plugin --template android
 ```
 
 - `basic`: cross-platform Rust plugin skeleton with `HelloPlugin` and typed helpers.
-- `android`: adds a Kotlin module under `android/` configured in `tessera-config.toml` under `[plugin.android]`. Always edit the plugin's own `android/` folder—`cargo tessera android init/build/dev` syncs it into `gen/android/` on every run.
+- `android`: adds a Kotlin Gradle library under `android/`, declared in the plugin's `tessera.toml`:
+
+  ```toml
+  [plugin.android]
+  module = "hello_plugin"
+  ```
+
+  Always edit the plugin's own `android/` folder: every Android command copies the modules of plugins in the app's Cargo dependencies into `gen/android/tessera-plugins/` and wires them into the Gradle build.
 
 Bind Kotlin static methods with `tessera_ui::android::jni_bind!`:
 
@@ -102,16 +109,10 @@ tessera_ui::android::jni_bind! {
 
 Use `PluginContext::current()` to obtain `context.android_app()` while the app is resumed, pass `activity(android_app)`, and dispatch any Android view work onto the Android UI thread.
 
-### Declaring Android permissions
+### Declaring permissions
 
-List required permissions in any package or plugin's `tessera-config.toml`:
-
-```toml
-permissions = ["camera", "notifications"]
-```
-
-Supported aliases: `notifications` (`POST_NOTIFICATIONS`), `camera` (`CAMERA`), `microphone` (`RECORD_AUDIO`), `location` (`ACCESS_COARSE_LOCATION`, `ACCESS_FINE_LOCATION`), and `bluetooth` (`BLUETOOTH_CONNECT`, `BLUETOOTH_SCAN`). For other permissions, list full Android names under `[package.metadata.tessera.android]` `permissions` in the app's `Cargo.toml`.
+Permissions are declared in each platform's native files. An app adds Android permissions to `gen/android/app/src/main/AndroidManifest.xml`; a plugin adds them to `android/src/main/AndroidManifest.xml` in its own module, and Gradle merges them into the app. On iOS, add usage descriptions to `gen/apple/iOS/Info.plist`. Request runtime permissions from the platform plugin that needs them.
 
 ## iOS and UIKit
 
-Start from `--template basic`, guard UIKit code with `#[cfg(target_os = "ios")]`, and obtain the retained hosting `UIView` on the main thread via `context.ui_view()` inside `on_resumed` (or `PluginContext::current()`). Keep UIKit calls on the main thread and add any required iOS usage descriptions to a custom `Info.plist` (see [Packaging and release](/guide/distribution#ios)).
+Start from `--template basic`, guard UIKit code with `#[cfg(target_os = "ios")]`, and obtain the retained hosting `UIView` on the main thread via `context.ui_view()` inside `on_resumed` (or `PluginContext::current()`). Keep UIKit calls on the main thread and add any required usage descriptions to the app's Xcode project (see [Packaging and release](/guide/distribution#ios)).

@@ -84,7 +84,14 @@ cargo tessera plugin new hello-plugin --template android
 ```
 
 - `basic`：跨平台 Rust 插件模板，包含 `HelloPlugin` 与类型化访问函数。
-- `android`：在 `android/` 下附加 Kotlin 模块，并在 `tessera-config.toml` 的 `[plugin.android]` 中声明。始终直接修改插件自己的 `android/` 目录——每次执行 `android init/build/dev` 都会将其同步进应用的 `gen/android/`。
+- `android`：在 `android/` 下附加 Kotlin Gradle 库，并在插件的 `tessera.toml` 中声明：
+
+  ```toml
+  [plugin.android]
+  module = "hello_plugin"
+  ```
+
+  始终直接修改插件自己的 `android/` 目录：每次执行 Android 命令时，应用 Cargo 依赖中各插件的模块都会被复制到 `gen/android/tessera-plugins/` 并接入 Gradle 构建。
 
 使用 `tessera_ui::android::jni_bind!` 绑定 Kotlin 静态方法：
 
@@ -102,16 +109,10 @@ tessera_ui::android::jni_bind! {
 
 应用处于恢复状态时，通过 `PluginContext::current()` 获取 `context.android_app()` 并传入 `activity(android_app)` 调用；涉及 Android 视图操作时务必切到 Android UI 线程执行。
 
-### 声明 Android 权限
+### 声明权限
 
-任意包或插件都可以在 `tessera-config.toml` 中列出所需权限：
-
-```toml
-permissions = ["camera", "notifications"]
-```
-
-内置支持的别名：`notifications`（`POST_NOTIFICATIONS`）、`camera`（`CAMERA`）、`microphone`（`RECORD_AUDIO`）、`location`（`ACCESS_COARSE_LOCATION`、`ACCESS_FINE_LOCATION`）与 `bluetooth`（`BLUETOOTH_CONNECT`、`BLUETOOTH_SCAN`）。如需列表之外的权限，在应用 `Cargo.toml` 的 `[package.metadata.tessera.android]` `permissions` 中填写完整 Android 权限名。
+权限在各平台的原生文件中声明。应用把 Android 权限写进 `gen/android/app/src/main/AndroidManifest.xml`；插件写进自己模块的 `android/src/main/AndroidManifest.xml`，由 Gradle 合并到应用中。iOS 的用途说明（Usage Description）写进 `gen/apple/iOS/Info.plist`。运行时权限请求由需要该权限的平台插件发起。
 
 ## iOS 与 UIKit
 
-从 `--template basic` 起步，用 `#[cfg(target_os = "ios")]` 隔离原生代码，并在主线程通过 `context.ui_view()` 获取已 retain 的宿主 `UIView`。UIKit 操作需留在主线程执行；所需用途说明（Usage Description）请通过自定义 `Info.plist` 配置（见[打包与发布](/zhHans/guide/distribution#ios)）。
+从 `--template basic` 起步，用 `#[cfg(target_os = "ios")]` 隔离原生代码，并在主线程通过 `context.ui_view()` 获取已 retain 的宿主 `UIView`。UIKit 操作需留在主线程执行；所需用途说明请添加到应用的 Xcode 工程中（见[打包与发布](/zhHans/guide/distribution#ios)）。

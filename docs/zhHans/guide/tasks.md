@@ -7,13 +7,14 @@ description: 用 launch 与 spawn 组织归属明确的异步任务，按需取�
 
 网络请求、文件读写和耗时计算都需要时间，而组件构建必须迅速完成。把异步工作放进任务里运行，准备好后再写回 `State`。每个任务都有清晰的所有权：丢弃 `Task` 句柄或改变 `launch` 的 key 都会自动取消任务。
 
-`tessera_ui` 提供四个原语：
+`tessera_ui` 提供五个原语：
 
 | API | 适用场景 |
 | --- | --- |
 | `launch(key, future)` | 随挂载组件和当前 `key` 存续的异步工作 |
 | `launch_once(future)` | 组件挂载期间只启动一次的异步工作 |
 | `spawn(dispatcher, future)` | 从动作中启动任务，返回由你持有生命周期的 `Task` |
+| `spawn_local(future)` | 与 `spawn` 类似，用于在当前 UI 会话上运行非 `Send` 的 future |
 | `on(dispatcher, future)` | 把任务中的某段工作切到指定调度器运行并等待结果 |
 
 为什么不在组件体里直接跑副作用，见[身份、生命周期与副作用](/zhHans/guide/lifecycle)。
@@ -123,7 +124,7 @@ launch_once(SearchModel::refresh(model));
 | `Dispatcher::Io` | 支持阻塞操作的 I/O 线程池 |
 | `Dispatcher::Default` | 按 CPU 核心数配置的计算线程池 |
 
-`spawn` 要求 future 满足 `Send + 'static`，`launch` 和 `launch_once` 接受非 `Send` 的 future。在原生平台上，所有调度器均内置 Tokio 1 运行时上下文（可直接依赖 `tokio = "1"`）；在 Web 上所有调度器均运行在浏览器事件循环中。
+`spawn` 要求 future 满足 `Send + 'static`，`launch`、`launch_once` 和 `spawn_local` 接受非 `Send` 的 future。只要有当前 UI 会话，`spawn_local` 可以在任意代码中调用，例如回调或模型方法。在原生平台上，所有调度器均内置 Tokio 1 运行时上下文（可直接依赖 `tokio = "1"`）；在 Web 上所有调度器均运行在浏览器事件循环中。
 
 推荐外层用 `Dispatcher::Ui`、耗时部分用 `on(Dispatcher::Io, ...)` 的模式：所有状态写入都在 UI 线程完成，取消在 `.await` 恢复前立即阻止过期写入。若在其他调度器直接写 `State<T>`（`T: Send`），切勿让 UI 线程阻塞等待正在访问状态的后台线程，否则会互相等待造成死锁。
 

@@ -5,7 +5,7 @@ description: What each file in a new Tessera project does and where your changes
 
 # Project structure
 
-A newly created Tessera project is a standard Cargo package with two TOML manifests and a generated host folder so the same code builds for desktop, mobile, and the browser.
+A newly created Tessera project is a standard Cargo package with a `tessera.toml` configuration file and a `gen/` folder for platform host projects, so the same code builds for desktop, mobile, and the browser.
 
 ## File layout
 
@@ -15,8 +15,7 @@ A newly created Tessera project is a standard Cargo package with two TOML manife
 my-app/
 ├── Cargo.toml
 ├── build.rs
-├── tessera-app.toml
-├── tessera-config.toml
+├── tessera.toml
 ├── icon.svg
 ├── assets/
 ├── gen/
@@ -32,7 +31,7 @@ my-app/
 └── .gitignore
 ```
 
-Day-to-day UI work stays inside `src/` and `assets/`. The files at the root configure app identity, assets, and permissions, while `gen/` holds platform host wrappers managed by `cargo tessera`.
+Day-to-day UI work stays inside `src/` and `assets/`. `tessera.toml` configures app identity, assets, and localization, while `gen/` holds the platform host projects. `gen/android/` and `gen/apple/` appear after `cargo tessera android init` and `cargo tessera apple init`.
 
 ## `Cargo.toml`
 
@@ -70,7 +69,7 @@ tessera-build = "..."
 
 The CLI pins matching `tessera-*` versions when creating the project. On native targets, `tokio = "1"` is included because Tessera dispatchers provide a Tokio 1 runtime context out of the box. Add `tessera-shard`, `tessera-i18n`, or `tessera-platform` to `[dependencies]` when your app needs routing, localization, or direct window/clipboard calls.
 
-Platform-specific packaging options also live here under `[package.metadata.tessera.android]` and `[package.metadata.tessera.ios]`. See [Packaging and release](/guide/distribution).
+Desktop installer and signing settings go in `[package.metadata.packager]`; mobile platform settings live in the generated Android and Xcode projects. See [Packaging and release](/guide/distribution).
 
 ## `src/lib.rs`: shared entry point
 
@@ -109,7 +108,7 @@ pub fn start() -> Result<(), JsValue> {
 }
 ```
 
-`run()` registers the root component, loads `res::application()` (window title, app ID, and desktop icon derived from `tessera-app.toml`), and installs `ComponentsPackage`. `#[tessera_ui::entry]` also generates the `android_main` export for Android. On the web, `start()` mounts onto the `<canvas>` in `gen/web/index.html` whose `id` matches the crate name.
+`run()` registers the root component, loads `res::application()` (window title, app ID, and desktop icon derived from `tessera.toml`), and installs `ComponentsPackage`. `#[tessera_ui::entry]` also generates the `android_main` export for Android. On the web, `start()` mounts onto the `<canvas>` in `gen/web/index.html` whose `id` matches the crate name.
 
 Additional packages (such as custom fonts, shaders, plugins, and localization catalogs) go on this builder. See [Entry point, windows, and sessions](/guide/app).
 
@@ -145,22 +144,42 @@ As your UI grows, split screens and reusable pieces into sibling modules next to
 
 ## `build.rs` and `src/res.rs`
 
-`build.rs` invokes `tessera_build::build()`, which reads `tessera-app.toml` and `tessera-config.toml`, indexes `assets/` and any localization directory, and writes `OUT_DIR/tessera_assets.rs`. `src/res.rs` includes that generated file as `crate::res`.
+`build.rs` invokes `tessera_build::build()`, which reads `tessera.toml`, indexes `assets/` and any localization directory, and writes `OUT_DIR/tessera_assets.rs`. `src/res.rs` includes that generated file as `crate::res`.
 
 You get `res::application()` out of the box, plus typed constants for every asset file (for example, `res::images::LOGO_SVG` for `assets/images/logo.svg`) and `res::I18N` / `res::i18n()` once localization is configured. See [Assets, images, and fonts](/guide/assets) and [Localization](/guide/i18n).
 
-## `tessera-app.toml` and `tessera-config.toml`
+## `tessera.toml`
 
-- **`tessera-app.toml`** defines app identity: `name`, reverse-domain `identifier` (at least two dot-separated ASCII segments), and `icon` (a square SVG with outlined text, or a PNG of at least 1024 × 1024).
-- **`tessera-config.toml`** configures build resources and platform capabilities: `permissions` (mapped to platform permission strings), `[assets]` (`dir`, `embed`, `tree_shaking.exclude`), and optional `[i18n]` (`dir`, `fallback`).
+Each package may have a `tessera.toml` next to its `Cargo.toml`. The template starts with:
 
-Both files include a `#:schema` comment at the top so editors with TOML schema support can validate keys as you edit.
+```toml
+#:schema https://raw.githubusercontent.com/tessera-ui/tessera/main/docs/schemas/tessera.schema.json
+
+[app]
+name = "my-app"
+identifier = "com.tessera.myapp"
+icon = "icon.svg"
+
+[assets]
+dir = "assets"
+```
+
+Replace the generated `identifier` with your own reverse-domain name before publishing. Keys are kebab-case, and unknown keys are errors. The file has these tables:
+
+- **`[app]`** defines app identity and is read only from the package being built: `name` (defaults to the Cargo package name), reverse-domain `identifier` (at least two dot-separated segments of ASCII letters and digits, each starting with a letter), and `icon` (a square SVG with outlined text and embedded resources, or a PNG of at least 1024 × 1024; without it, the Tessera logo is used).
+- **`[assets]`** enables asset generation: `dir` (defaults to `assets`), plus `embed` and `keep` glob lists. See [Assets, images, and fonts](/guide/assets).
+- **`[i18n]`** enables localization catalogs: `dir` (defaults to `locales`) and the required `fallback`. See [Localization](/guide/i18n).
+- **`[plugin.android]`** is used by plugin packages: `module` names the Gradle library in the package's `android/` directory. See [Platform integration and plugins](/guide/plugins).
+
+The `#:schema` comment on the first line lets editors with TOML schema support validate keys as you edit.
 
 ## `gen/` host directories
 
-- **`gen/web/`**: created with the project. You can customize `index.html`, as long as you leave `<title>` and the `<!-- tessera-app -->` block alone—CLI web commands update those from `tessera-app.toml`. Web builds write `pkg-web/`, `tessera/`, and `app/` alongside it (all gitignored).
-- **`gen/android/`**: generated on demand by `cargo tessera android init` and refreshed on every `android build` or `android dev`. Keep Android settings in `Cargo.toml` and `tessera-config.toml` rather than editing generated Gradle files directly.
-- **iOS**: assembled directly inside Cargo's `target/` directory during `cargo tessera ios build`, with no `gen/` folder required.
+- **`gen/web/`**: created with the project. `index.html` belongs to your app; its `<head>` must keep the `<!-- tessera-app -->` … `<!-- /tessera-app -->` block, which web commands rewrite with the title, icons, and manifest link. Everything else in the file is preserved. Web builds write `pkg-web/`, `tessera/`, and `app/` alongside it (all gitignored).
+- **`gen/android/`**: generated once by `cargo tessera android init`. It is an ordinary Android project that you commit and edit, for example to declare permissions in `AndroidManifest.xml`. Android commands only rewrite the gitignored files `cargo tessera` maintains, such as `tessera.properties`.
+- **`gen/apple/`**: generated once by `cargo tessera apple init` on macOS. It is an Xcode project with iOS and macOS targets that you commit and edit in Xcode. Apple commands only rewrite the gitignored `tessera.xcconfig` and `Tessera.xcassets`.
+
+See [Packaging and release](/guide/distribution) for what each platform project contains.
 
 ## Other generated files
 

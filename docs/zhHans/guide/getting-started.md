@@ -12,8 +12,8 @@ description: 安装 cargo-tessera，创建新项目，并在桌面、浏览器�
 Tessera 需要 **Rust 1.98 或更高版本**（`cargo-tessera` 声明的最低版本），以及当前系统的原生链接器和构建工具。如果要跑其他平台，还需要对应的环境：
 
 - **Web**：支持 WebGPU 的浏览器；打发布包还需要 Binaryen 110+，且 `wasm-opt` 在 `PATH` 中。
-- **Android**：Android SDK 与 NDK、Gradle 所需的 JDK，以及真机或模拟器。
-- **iOS**：装有 Xcode 的 macOS。
+- **Android**：Android SDK 与 NDK、Gradle 8.14 支持的 JDK（17 或 21），以及真机或模拟器。
+- **iOS**：装有 Xcode 与 XcodeGen（`brew install xcodegen`）的 macOS。
 
 各系统具体的系统库依赖（如 Linux 下的窗口和键盘库）见[目标平台](/zhHans/guide/platforms)。
 
@@ -41,7 +41,7 @@ cargo tessera dev
 
 ## 修改代码并自动重跑
 
-`cargo tessera dev` 会盯着 `src/`、`Cargo.toml`、`build.rs`、`tessera-app.toml`、`tessera-config.toml`、应用图标和资源目录。只要其中任何一个改动，它就会重新做边界检查、编译并重启桌面窗口。
+`cargo tessera dev` 会盯着 `src/`、`Cargo.toml`、`build.rs`、`tessera.toml`、应用图标和资源目录。只要其中任何一个改动，它就会重新做边界检查、编译并重启桌面窗口。
 
 每次重启都是新进程，所以运行时内存里的状态会回到初始值。要是改出了编译错误或检查报错，修好再保存就行，`dev` 会留在后台等你的下一次保存。
 
@@ -69,17 +69,18 @@ cargo tessera android init
 cargo tessera android dev --device DEVICE_ID
 ```
 
-`android init` 会顺便装好 Rust 的 Android 编译目标（加 `--skip-targets-install` 可跳过）。`DEVICE_ID` 就是 `adb devices` 输出的设备编号。`android dev` 也会监听改动，保存后自动重编、重新安装并拉起应用。
+`android init` 会在 `gen/android/` 生成 Gradle 工程（它和应用代码一起提交），并顺便装好 Rust 的 Android 编译目标（加 `--skip-targets-install` 可跳过）。`DEVICE_ID` 就是 `adb devices` 输出的设备编号。`android dev` 也会监听改动，保存后自动重编、重新安装并拉起应用。
 
 ### iOS
 
-在装了 Xcode 的 macOS 上，可以构建 iOS 模拟器用的 `.app`：
+在装了 Xcode 和 XcodeGen 的 macOS 上，先生成一次 Xcode 工程，再构建 iOS 模拟器用的 `.app`：
 
 ```sh
+cargo tessera apple init
 cargo tessera ios build
 ```
 
-注意它不是监听模式，编完一次包就退出；加 `--device` 可以打出真机用的 IPA。签名和 bundle 配置见[打包与发布](/zhHans/guide/distribution#ios)。
+`apple init` 会生成 `gen/apple/`，这是一个和应用代码一起提交的 Xcode 工程，也可以直接在 Xcode 里打开运行。注意 `ios build` 不是监听模式，编完一次包就退出；加 `--device` 可以打出真机用的 IPA。签名和工程设置见[打包与发布](/zhHans/guide/distribution#ios)。
 
 ## 静态检查与自动修复
 

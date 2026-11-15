@@ -1,0 +1,12 @@
+#:schema https://raw.githubusercontent.com/tessera-ui/tessera/main/docs/schemas/tessera.schema.json
+
+[app]
+name = "Tessera demo"
+identifier = "io.github.tesseraui.demo"
+icon = "icon.svg"
+
+[assets]
+dir = "assets"
+
+[i18n]
+fallback = "en"

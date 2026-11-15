@@ -23,8 +23,8 @@ description: Windows、macOS、Linux、Android、iOS 与 Web 六大目标平台�
 | Windows | Windows 构建工具与 SDK；支持 Direct3D 12 的显卡与驱动 |
 | macOS | Xcode / Apple 命令行工具；支持 Metal 的 GPU 与驱动 |
 | Linux | C/C++ 工具链、X11 或 Wayland 客户端库、`libxkbcommon` 以及 Vulkan 驱动 |
-| Android | Android SDK 与 NDK、Gradle 所需的 JDK、真机或模拟器（`minSdk` 默认为 `24`） |
-| iOS | 装有 Xcode 与 iOS SDK 的 macOS（部署目标默认 `15.0`） |
+| Android | Android SDK 与 NDK、Gradle 8.14 支持的 JDK（17 或 21）、真机或模拟器（生成的工程将 `minSdk` 设为 `24`） |
+| iOS | 装有 Xcode、iOS SDK 与 XcodeGen 的 macOS（生成的 Xcode 工程以 iOS `15.0` 为部署目标） |
 | Web | `wasm32-unknown-unknown` 目标、支持 WebGPU 的安全上下文浏览器（HTTPS 或 `localhost`）；release 构建需 Binaryen 110+（`wasm-opt`） |
 
 ## 桌面平台要点
@@ -42,7 +42,7 @@ description: Windows、macOS、Linux、Android、iOS 与 Web 六大目标平台�
 
 Web 构建通过 WebGPU 直接绘制在 `<canvas>` 中（无 WebGL 回退，也不生成 DOM 树）。模板中 `WebConfig::with_canvas_id(env!("CARGO_CRATE_NAME"))` 与 `gen/web/index.html` 的画布 ID 保持一致。
 
-由于浏览器无法访问系统字体，`ComponentsPackage` 内嵌了启动用 Roboto 字体并按需从 CDN 拉取其余 Roboto / Noto Sans SC 子集；若需离线运行或受限 CSP，请自行注册随包分发的 `Fonts`（见[资源、图片与字体](/zhHans/guide/assets#注册字体)）。
+由于浏览器无法访问系统字体，`ComponentsPackage` 内嵌了启动用 Roboto 字体并从 CDN 按需加载其余 Roboto / Noto Sans SC 子集；若需离线运行或受限 CSP，请自行注册随包分发的 `Fonts`（见[资源、图片与字体](/zhHans/guide/assets#注册字体)）。
 
 ## 无障碍支持范围
 

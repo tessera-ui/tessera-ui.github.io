@@ -81,11 +81,11 @@ fn main() {}
 | `.plugin(plugin)` | 注册由当前会话持有的 `Plugin` |
 | `.config(config)` | 设置窗口、Web 与 GPU 选项（`TesseraConfig`） |
 
-使用组件库时务必注册 `ComponentsPackage`（它会自动带上提供剪贴板与窗口服务的 `PlatformPackage`）。自定义字体、管线和插件详见[资源、图片与字体](/zhHans/guide/assets#字体)、[自定义绘制与着色器](/zhHans/guide/drawing)与[平台集成与插件](/zhHans/guide/plugins)。
+使用组件库时务必注册 `ComponentsPackage`（它会自动带上提供剪贴板与窗口服务的 `PlatformPackage`）。自定义字体、管线和插件详见[资源、图片与字体](/zhHans/guide/assets#注册字体)、[自定义绘制与着色器](/zhHans/guide/drawing)与[平台集成与插件](/zhHans/guide/plugins)。
 
 ## 配置窗口与应用标识
 
-在生成的项目里，基于 `res::application()` 修改选项，不要直接从 `TesseraConfig::default()` 起步，这样来自 `tessera-app.toml` 的标题、应用 ID 和图标都会自动保留：
+在生成的项目里，基于 `res::application()` 修改选项，不要直接从 `TesseraConfig::default()` 起步，这样来自 `tessera.toml` 的标题、应用 ID 和图标都会自动保留：
 
 ```rust
 #[tessera_ui::entry]
@@ -99,15 +99,16 @@ pub fn run() -> EntryPoint {
 }
 ```
 
-应用的显示名称、反向域名标识符（至少两段点分 ASCII 标识符）和源图标写在 `tessera-app.toml`：
+应用的显示名称、反向域名标识符和源图标写在 `tessera.toml` 的 `[app]` 表中：
 
 ```toml
+[app]
 name = "Notes"
 identifier = "dev.example.notes"
 icon = "icon.svg"
 ```
 
-源图标应为正方形 SVG（文字转为路径、外部资源内嵌）或至少 1024 × 1024 的正方形 PNG。
+`name` 默认为 Cargo 包名。标识符至少包含两段以点分隔的 ASCII 字母数字，每段以字母开头。源图标应为正方形 SVG（文字转为路径、外部资源内嵌）或至少 1024 × 1024 的正方形 PNG；不设置 `icon` 时使用 Tessera 标志。
 
 ## 集成标题栏与窗口控制
 

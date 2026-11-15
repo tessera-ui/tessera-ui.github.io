@@ -81,11 +81,11 @@ fn main() {}
 | `.plugin(plugin)` | Register a session-owned `Plugin` instance |
 | `.config(config)` | Supply `TesseraConfig` for window, web, and GPU settings |
 
-Always register `ComponentsPackage` when using `tessera-components` (it also registers `PlatformPackage` for clipboard and desktop window services). See [Assets, images, and fonts](/guide/assets#fonts), [Custom drawing and shaders](/guide/drawing), and [Platform integration and plugins](/guide/plugins).
+Always register `ComponentsPackage` when using `tessera-components` (it also registers `PlatformPackage` for clipboard and desktop window services). See [Assets, images, and fonts](/guide/assets#registering-fonts), [Custom drawing and shaders](/guide/drawing), and [Platform integration and plugins](/guide/plugins).
 
 ## Configuring windows and app identity
 
-Start from `res::application()` rather than `TesseraConfig::default()` so window title, application ID, and desktop icon stay in sync with `tessera-app.toml`:
+Start from `res::application()` rather than `TesseraConfig::default()` so window title, application ID, and desktop icon stay in sync with `tessera.toml`:
 
 ```rust
 #[tessera_ui::entry]
@@ -99,15 +99,16 @@ pub fn run() -> EntryPoint {
 }
 ```
 
-Set display name, reverse-domain identifier (at least two dot-separated ASCII segments), and source icon in `tessera-app.toml`:
+Set display name, reverse-domain identifier, and source icon in the `[app]` table of `tessera.toml`:
 
 ```toml
+[app]
 name = "Notes"
 identifier = "dev.example.notes"
 icon = "icon.svg"
 ```
 
-Use a square SVG (with text converted to paths and external assets embedded) or a square PNG (at least 1024 × 1024).
+`name` defaults to the Cargo package name. The identifier needs at least two dot-separated segments of ASCII letters and digits, each starting with a letter. Use a square SVG (with text converted to paths and external resources embedded) or a square PNG of at least 1024 × 1024; without `icon`, the Tessera logo is used.
 
 ## Integrated title bars and window controls
 
