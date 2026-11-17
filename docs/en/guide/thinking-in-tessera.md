@@ -130,6 +130,7 @@ Callbacks require owned `'static` captures and run on the UI thread, so they do 
 Tessera enforces a clean split between **UI-building code** and **ordinary Rust code**:
 
 - **Build contexts**: `#[tessera]` and `#[shard]` functions, root entry closures (`EntryPoint::new`, `UiTest::content`), and render-slot closures (`RenderSlot`, `RenderSlotWith`, `key`, `provide_context`, and built-in container content closures).
+- **Pointer detectors**: closures passed directly to `Modifier::pointer_input` / `pointer_input_once`, including their async bodies, are also Tessera-colored. Their gesture action callbacks remain ordinary contexts; see [Gestures, input, and focus](/guide/interaction).
 - **Ordinary Rust**: helpers, methods, event callbacks (`on_click`, `on_change`), iterator combinators (`.map(...)`, `.unwrap_or_else(...)`), and async tasks.
 
 Call components and build-scoped APIs (`remember`, `retain`, `use_context`, `provide_context`, `launch`, `key`, `RenderSlot::new`) only inside build contexts. To share reusable UI snippets, extract a `#[tessera]` function; to react to user input, update state in the callback and let the UI rebuild. Run `cargo tessera check` to verify these boundaries before building.

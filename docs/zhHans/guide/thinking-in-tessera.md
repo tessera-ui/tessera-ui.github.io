@@ -130,6 +130,7 @@ fn click_counter(clicks: u32, on_click: Option<Callback>) {
 Tessera 明确区分**构建界面的代码**和**普通 Rust 代码**：
 
 - **构建上下文**：`#[tessera]` / `#[shard]` 函数体、入口根闭包（`EntryPoint::new`、`UiTest::content`），以及渲染槽闭包（`RenderSlot`、`RenderSlotWith`、`key`、`provide_context` 和容器的内容闭包）。
+- **指针检测器**：直接传给 `Modifier::pointer_input` / `pointer_input_once` 的闭包及其异步体也属于 Tessera 着色上下文；其中的手势动作回调仍属于普通上下文，见[手势、交互与焦点](/zhHans/guide/interaction)。
 - **普通 Rust 上下文**：普通辅助函数、方法、事件回调（`on_click`、`on_change`）、迭代器闭包（`.map(...)`、`.unwrap_or_else(...)`）以及异步任务。
 
 组件调用与构建期 API（`remember`、`retain`、`use_context`、`provide_context`、`launch`、`key`、`RenderSlot::new`）只能出现在构建上下文中。需要复用一段界面时，把它写成 `#[tessera]` 组件函数；需要响应交互时，在回调里更新状态让组件自然重建。提交前用 `cargo tessera check` 校验这些边界。

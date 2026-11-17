@@ -5,6 +5,8 @@ description: 用 launch 与 spawn 组织归属明确的异步任务，按需取�
 
 # 后台任务与异步工作
 
+自定义指针手势使用修饰符拥有的 `pointer_input` / `pointer_input_once` 任务，见[手势、交互与焦点](/zhHans/guide/interaction)。本页介绍后台工作与动作触发的任务。
+
 网络请求、文件读写和耗时计算都需要时间，而组件构建必须迅速完成。把异步工作放进任务里运行，准备好后再写回 `State`。每个任务都有清晰的所有权：丢弃 `Task` 句柄或改变 `launch` 的 key 都会自动取消任务。
 
 `tessera_ui` 提供五个原语：

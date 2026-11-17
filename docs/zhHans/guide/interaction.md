@@ -17,23 +17,20 @@ description: 响应点击、开关、选择、拖动，管理键盘焦点遍历�
 
 ## 为自定义界面添加交互
 
-标准组件满足需求时优先用标准组件。若要保留通用交互和无障碍语义、仅自定义外观，使用 `tessera_components::modifier::ModifierExt` 提供的交互修饰符（配置结构体来自 `tessera_foundation::modifier`）：
+标准组件满足需求时优先用标准组件。自定义界面时，从 `tessera_foundation::modifier` 导入交互修饰符与配置类型。这些 API 不依赖 Material 主题，也不绘制水波纹；Material 控件负责提供自己的视觉反馈。
 
 | 修饰符 | 用途 |
 | --- | --- |
-| `clickable(ClickableArgs)` | 点击激活（指针/键盘/无障碍）与水波纹 |
+| `clickable(ClickableArgs)` | 点击激活（指针/键盘/无障碍） |
+| `combined_clickable(CombinedClickableArgs)` | 点击与长按动作，以及取消处理 |
 | `toggleable(ToggleableArgs)` | 开关类布尔值切换（`on_value_change`） |
 | `selectable(SelectableArgs)` | 单选/选中状态切换 |
-| `draggable(DraggableArgs)` | 接收以局部物理像素为单位的拖动增量（位于 `tessera_foundation::modifier::ModifierExt`） |
+| `draggable(DraggableArgs)` | 接收以局部物理像素为单位的拖动增量 |
 
 给自定义点击区域设置 `role` 与 `label`（或 `description`），它才会注册进键盘焦点遍历并向辅助技术暴露点击动作：
 
 ```rust
-use tessera_components::{
-    boxed::boxed,
-    md3::text::text,
-    modifier::ModifierExt as _,
-};
+use tessera_components::{boxed::boxed, md3::text::text};
 use tessera_foundation::modifier::{ClickableArgs, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, tessera};
 
@@ -55,7 +52,7 @@ fn save_action(on_save: Callback) {
 自定义开关行示例：
 
 ```rust
-use tessera_components::{md3::text::text, modifier::ModifierExt as _, row::row};
+use tessera_components::{md3::text::text, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, ToggleableArgs};
 use tessera_ui::{CallbackWith, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -83,7 +80,7 @@ fn wifi_row() {
 把记住的 `State<InteractionState>` 传给交互修饰符，即可在构建时读取悬停、按下、焦点和拖动状态来改变外观：
 
 ```rust
-use tessera_components::{boxed::boxed, md3::text::text, modifier::ModifierExt as _};
+use tessera_components::{boxed::boxed, md3::text::text};
 use tessera_foundation::modifier::{ClickableArgs, InteractionState, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -106,6 +103,47 @@ fn hold_to_preview() {
 ```
 
 `is_hovered()`、`is_focused()` 和 `is_dragged()` 用法相同。
+
+## 自定义异步手势
+
+标准激活行为优先用上面的交互修饰符：原始手势检测不会补上键盘与无障碍行为。需要自定义指针处理时，通过 `Modifier::pointer_input(key, detector)` 或 `pointer_input_once(detector)` 挂载检测器，并优先使用 `tessera_foundation::pointer_gestures` 中的共享辅助函数：
+
+```rust
+use tessera_components::{boxed::boxed, md3::text::text};
+use tessera_foundation::{
+    modifier::ModifierExt as _,
+    pointer_gestures::{TapGesture, TapGestureConfig, detect_tap_gestures},
+};
+use tessera_ui::{Dp, Modifier, remember, tessera};
+
+#[tessera]
+fn tap_counter() {
+    let count = remember(|| 0usize);
+    boxed()
+        .modifier(
+            Modifier::new()
+                .size(Dp(160.0), Dp(80.0))
+                .pointer_input_once(move |mut scope| async move {
+                    detect_tap_gestures(&mut scope, TapGestureConfig::default(), move |gesture| {
+                        if matches!(gesture, TapGesture::Tapped(_, _)) {
+                            count.with_mut(|value| *value += 1);
+                        }
+                    })
+                    .await;
+                }),
+        )
+        .children(move || text(format!("Taps: {}", count.get())));
+}
+```
+
+每次挂载拥有一个 UI 本地任务。修饰符卸载或 key 改变时取消任务；key 不变的重建保留原先运行的闭包。需要最新数据时捕获状态句柄，需要重新开始检测的配置放进 key。`pointer_input_once` 表示每次挂载只启动一个任务，不是只处理一次手势。
+
+- `detect_tap_gestures`、`detect_long_press_gestures`、`detect_drag_gestures`、`detect_scroll_gestures` 统一处理采样事件与取消。拖动阈值从按下位置累计，回调中的位移是逐次采样的局部增量。长按使用帧时钟，指针静止时也能触发。
+- 检测器被丢弃时也可能执行取消回调；清理时先用 `State::is_alive` 检查，再访问记住的状态。
+- 需要自行仲裁事件时，通过 `PointerInputScope` 等待 `PointerEventPass::Initial`、`Main` 或 `Final`。每个采样完成三轮分发后才处理下一个采样；消费立即影响同次分发中的后续处理器。Main 先处理子节点再处理父节点，子节点的点击不会同时激活祖先点击处理器。
+- `await_each_gesture` 等观察到的所有指针抬起后再开始下一轮自定义手势。无关的异步工作放到独立任务：检测器等待其他工作时不会缓冲指针事件。
+
+直接传给 `pointer_input`、`pointer_input_once` 的检测器闭包属于 Tessera 着色上下文；手势动作回调仍是普通回调，不能调用组件或构建期 API。
 
 ## 键盘焦点管理
 

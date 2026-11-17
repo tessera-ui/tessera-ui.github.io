@@ -17,23 +17,20 @@ Create `Callback` or `CallbackWith` handles only when storing, reusing, or forwa
 
 ## Interactive modifiers for custom UI
 
-When an existing Material control fits your task, prefer it. When building a custom visual surface with standard interaction behavior, attach modifiers from `tessera_components::modifier::ModifierExt` (configured with structs from `tessera_foundation::modifier`):
+When an existing Material control fits your task, prefer it. For custom UI, import interaction modifiers and their configuration types from `tessera_foundation::modifier`. These provide behavior without requiring a Material theme or adding ripples; Material controls supply their own visual feedback.
 
 | Modifier | Behavior |
 | --- | --- |
-| `clickable(ClickableArgs)` | Pointer/keyboard click, ripple, and click semantics |
+| `clickable(ClickableArgs)` | Pointer/keyboard/accessibility activation |
+| `combined_clickable(CombinedClickableArgs)` | Click and long-click actions with cancellation |
 | `toggleable(ToggleableArgs)` | Boolean toggle (`on_value_change`) with toggled semantics |
 | `selectable(SelectableArgs)` | Selection item (`selected` + `on_click`) |
-| `draggable(DraggableArgs)` | Drag deltas in local physical pixels (`tessera_foundation::modifier::ModifierExt`) |
+| `draggable(DraggableArgs)` | Drag deltas in local physical pixels |
 
 Give custom clickable elements an accessibility `role` and `label` (or `description`) so they register as keyboard focus targets and expose click actions to assistive technology:
 
 ```rust
-use tessera_components::{
-    boxed::boxed,
-    md3::text::text,
-    modifier::ModifierExt as _,
-};
+use tessera_components::{boxed::boxed, md3::text::text};
 use tessera_foundation::modifier::{ClickableArgs, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, tessera};
 
@@ -55,7 +52,7 @@ fn save_action(on_save: Callback) {
 Here is a custom toggleable row:
 
 ```rust
-use tessera_components::{md3::text::text, modifier::ModifierExt as _, row::row};
+use tessera_components::{md3::text::text, row::row};
 use tessera_foundation::modifier::{ModifierExt as _, ToggleableArgs};
 use tessera_ui::{CallbackWith, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -83,7 +80,7 @@ Keep checked and selected semantics distinct: `toggleable` publishes toggled sta
 Pass a remembered `State<InteractionState>` to interactive modifiers when custom visuals need to react to hover, press, focus, or drag:
 
 ```rust
-use tessera_components::{boxed::boxed, md3::text::text, modifier::ModifierExt as _};
+use tessera_components::{boxed::boxed, md3::text::text};
 use tessera_foundation::modifier::{ClickableArgs, InteractionState, ModifierExt as _};
 use tessera_ui::{Callback, Dp, Modifier, accesskit::Role, remember, tessera};
 
@@ -106,6 +103,47 @@ fn hold_to_preview() {
 ```
 
 `is_hovered()`, `is_focused()`, and `is_dragged()` work the same way.
+
+## Custom asynchronous gestures
+
+Use the interactive modifiers above for standard activation: raw gesture detection does not add keyboard or accessibility behavior. For custom pointer handling, attach a detector with `Modifier::pointer_input(key, detector)` or `pointer_input_once(detector)` and prefer the shared helpers in `tessera_foundation::pointer_gestures`:
+
+```rust
+use tessera_components::{boxed::boxed, md3::text::text};
+use tessera_foundation::{
+    modifier::ModifierExt as _,
+    pointer_gestures::{TapGesture, TapGestureConfig, detect_tap_gestures},
+};
+use tessera_ui::{Dp, Modifier, remember, tessera};
+
+#[tessera]
+fn tap_counter() {
+    let count = remember(|| 0usize);
+    boxed()
+        .modifier(
+            Modifier::new()
+                .size(Dp(160.0), Dp(80.0))
+                .pointer_input_once(move |mut scope| async move {
+                    detect_tap_gestures(&mut scope, TapGestureConfig::default(), move |gesture| {
+                        if matches!(gesture, TapGesture::Tapped(_, _)) {
+                            count.with_mut(|value| *value += 1);
+                        }
+                    })
+                    .await;
+                }),
+        )
+        .children(move || text(format!("Taps: {}", count.get())));
+}
+```
+
+Each attachment owns one UI-local task. Detaching the modifier or changing its key cancels the task; rebuilding with the same key keeps the original running closure. Capture state handles for current values, and put configuration that should restart detection in the key. `pointer_input_once` means one task per attachment, not one gesture.
+
+- `detect_tap_gestures`, `detect_long_press_gestures`, `detect_drag_gestures`, and `detect_scroll_gestures` share sampled event handling and cancellation. Drag thresholds accumulate from the press; deltas are incremental local movement. Long presses use the frame clock, including while the pointer is still.
+- Cancellation callbacks can run when a detector is dropped. Check `State::is_alive` before touching remembered state during cleanup.
+- For custom arbitration, use `PointerInputScope` to await `PointerEventPass::Initial`, `Main`, or `Final`. Each sample completes all three passes before the next sample; consumption affects later handlers in the same dispatch. Main runs children before parents, so a child's tap does not activate an ancestor click handler.
+- `await_each_gesture` repeats a custom gesture body after all observed pointers lift. Keep unrelated asynchronous work in a separate task: pointer events are not buffered while the detector awaits something else.
+
+The detector closures passed directly to `pointer_input` and `pointer_input_once` are Tessera-colored; gesture action callbacks are ordinary callbacks and must not call components or build-scoped APIs.
 
 ## Focus management
 

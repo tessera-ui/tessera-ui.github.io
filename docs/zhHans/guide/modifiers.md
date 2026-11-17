@@ -35,8 +35,8 @@ fn status_badge() {
 
 | Trait | 提供的能力 |
 | --- | --- |
-| `tessera_foundation::modifier::ModifierExt` | 尺寸与约束（`size`、`width`、`height`、`fill_max_*`、`required_*`、`size_in`、`constrain`）、`padding*`、`offset`、`alpha`、`clip_to_bounds`、`clip_shape`、`weight`、`align`、`window_insets_*`、`draggable`、`block_touch_propagation`、`window_drag_region`、`semantics`、`clear_and_set_semantics` |
-| `tessera_components::modifier::ModifierExt` | 基础绘制与状态交互修饰符：`background*`、`border*`、`clickable`、`toggleable`、`selectable` |
+| `tessera_foundation::modifier::ModifierExt` | 尺寸与约束（`size`、`width`、`height`、`fill_max_*`、`required_*`、`size_in`、`constrain`）、`padding*`、`offset`、`alpha`、`clip_to_bounds`、`clip_shape`、`weight`、`align`、`window_insets_*`、`clickable`、`combined_clickable`、`toggleable`、`selectable`、`draggable`、`block_touch_propagation`、`window_drag_region`、`semantics`、`clear_and_set_semantics` |
+| `tessera_components::modifier::ModifierExt` | 绘制扩展：`background*`、`border*` |
 | `tessera_components::md3::modifier::ModifierExt` | Material 滚动与高度阴影：`vertical_scroll`、`horizontal_scroll`、`scroll`、`shadow` |
 | `tessera_ui::modifier::FocusModifierExt` | 焦点与几何位置观察：`focusable`、`focus_requester`、`focus_properties`、`preferred_tab_stop`、`focus_group`、`focus_scope`、`focus_restorer`、`focus_traversal_policy`、`on_focus_changed`、`on_globally_positioned*`、`on_layout_coordinates`、`on_local_to_window` |
 | `tessera_ui::modifier::CursorModifierExt` | 鼠标悬停光标 `hover_cursor_icon` |
@@ -96,7 +96,7 @@ let content_surface = Modifier::new()
 
 ### 交互与语义
 
-- `clickable`、`toggleable`、`selectable`、`draggable` 把指针、键盘激活、水波纹和语义串在一起，见[手势、交互与焦点](/zhHans/guide/interaction)。
+- foundation 的 `clickable`、`combined_clickable`、`toggleable`、`selectable` 提供指针、键盘、焦点与无障碍行为，不附带视觉反馈；`draggable` 报告局部拖动增量。自定义异步手势使用 `Modifier::pointer_input` / `pointer_input_once`，见[手势、交互与焦点](/zhHans/guide/interaction)。
 - `semantics` 和 `clear_and_set_semantics` 用来挂载或覆盖无障碍元数据，见[语义与无障碍](/zhHans/guide/accessibility)。
 
 ## 复用与在自定义组件里暴露 `modifier`
