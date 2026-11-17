@@ -17,7 +17,7 @@ Network requests, disk I/O, and heavy computation take time, whereas component b
 | `spawn_local(future)` | Like `spawn`, for `!Send` futures run on the current UI session |
 | `on(dispatcher, future)` | Running part of a task on another dispatcher and awaiting its result |
 
-See [Identity, lifecycle, and effects](/guide/lifecycle) for why side effects stay out of plain build logic.
+See [Identity, lifecycle, and effects](/guide/lifecycle) for why side effects stay out of plain build logic. Custom pointer gestures use modifier-owned `pointer_input` / `pointer_input_once` tasks instead; see [Gestures, input, and focus](/guide/interaction).
 
 ## Loading data in a component (`launch`)
 

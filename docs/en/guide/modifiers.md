@@ -35,8 +35,8 @@ fn status_badge() {
 
 | Trait | Methods it provides |
 | --- | --- |
-| `tessera_foundation::modifier::ModifierExt` | Sizing (`size`, `width`, `height`, `fill_max_*`, `required_*`, `size_in`, `constrain`), `padding*`, `offset`, `alpha`, `clip_to_bounds`, `clip_shape`, `weight`, `align`, `window_insets_*`, `draggable`, `block_touch_propagation`, `window_drag_region`, `semantics`, `clear_and_set_semantics` |
-| `tessera_components::modifier::ModifierExt` | Visual and stateful interaction modifiers: `background*`, `border*`, `clickable`, `toggleable`, `selectable` |
+| `tessera_foundation::modifier::ModifierExt` | Sizing (`size`, `width`, `height`, `fill_max_*`, `required_*`, `size_in`, `constrain`), `padding*`, `offset`, `alpha`, `clip_to_bounds`, `clip_shape`, `weight`, `align`, `window_insets_*`, `clickable`, `combined_clickable`, `toggleable`, `selectable`, `draggable`, `block_touch_propagation`, `window_drag_region`, `semantics`, `clear_and_set_semantics` |
+| `tessera_components::modifier::ModifierExt` | Drawing extensions: `background*`, `border*` |
 | `tessera_components::md3::modifier::ModifierExt` | Material scrolling and elevation shadows: `vertical_scroll`, `horizontal_scroll`, `scroll`, `shadow` |
 | `tessera_ui::modifier::FocusModifierExt` | Focus registration and geometry observers: `focusable`, `focus_requester`, `focus_properties`, `preferred_tab_stop`, `focus_group`, `focus_scope`, `focus_restorer`, `focus_traversal_policy`, `on_focus_changed`, `on_globally_positioned*`, `on_layout_coordinates`, `on_local_to_window` |
 | `tessera_ui::modifier::CursorModifierExt` | `hover_cursor_icon` |
@@ -96,7 +96,7 @@ let content_surface = Modifier::new()
 
 ### Interaction and semantics
 
-- `clickable`, `toggleable`, `selectable`, and `draggable` connect pointer, keyboard activation, ripples, and accessibility metadata; see [Gestures, input, and focus](/guide/interaction).
+- Foundation's `clickable`, `combined_clickable`, `toggleable`, and `selectable` provide pointer, keyboard, focus, and accessibility behavior without visual feedback; `draggable` reports local drag deltas. Use `Modifier::pointer_input` / `pointer_input_once` for custom asynchronous gestures; see [Gestures, input, and focus](/guide/interaction).
 - `semantics` and `clear_and_set_semantics` attach or replace accessibility metadata; see [Semantics and accessibility](/guide/accessibility).
 
 ## Reusing and composing modifiers
