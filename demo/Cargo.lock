@@ -21,7 +21,7 @@ checksum = "366ffbaa4442f4684d91e2cd7c5ea7c4ed8add41959a31447066e279e432b618"
 [[package]]
 name = "accesskit"
 version = "0.25.2"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "uuid",
 ]
@@ -29,7 +29,7 @@ dependencies = [
 [[package]]
 name = "accesskit_atspi_common"
 version = "0.21.1"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -42,7 +42,7 @@ dependencies = [
 [[package]]
 name = "accesskit_consumer"
 version = "0.39.2"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "hashbrown 0.17.1",
@@ -51,7 +51,7 @@ dependencies = [
 [[package]]
 name = "accesskit_ios"
 version = "0.2.2"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -64,7 +64,7 @@ dependencies = [
 [[package]]
 name = "accesskit_macos"
 version = "0.27.2"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -77,7 +77,7 @@ dependencies = [
 [[package]]
 name = "accesskit_unix"
 version = "0.24.1"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "accesskit_atspi_common",
@@ -94,7 +94,7 @@ dependencies = [
 [[package]]
 name = "accesskit_windows"
 version = "0.35.2"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "accesskit_consumer",
@@ -3328,7 +3328,7 @@ dependencies = [
 [[package]]
 name = "tessera-accesskit-winit"
 version = "0.34.2"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "accesskit_ios",
@@ -3342,7 +3342,7 @@ dependencies = [
 [[package]]
 name = "tessera-android-activity"
 version = "0.6.1"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "android-properties",
  "bitflags 2.13.2",
@@ -3360,8 +3360,8 @@ dependencies = [
 
 [[package]]
 name = "tessera-build"
-version = "0.1.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+version = "1.0.0"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "anyhow",
  "embed-resource",
@@ -3381,8 +3381,8 @@ dependencies = [
 
 [[package]]
 name = "tessera-components"
-version = "2.7.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+version = "3.0.0"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "bytemuck",
  "encase",
@@ -3417,7 +3417,7 @@ dependencies = [
 [[package]]
 name = "tessera-cosmic-text"
 version = "0.19.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "bitflags 2.13.2",
  "fontdb",
@@ -3440,7 +3440,7 @@ dependencies = [
 [[package]]
 name = "tessera-foundation"
 version = "0.1.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "tessera-ui",
 ]
@@ -3448,7 +3448,7 @@ dependencies = [
 [[package]]
 name = "tessera-glyphon"
 version = "0.12.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "etagere",
  "lru",
@@ -3460,7 +3460,7 @@ dependencies = [
 [[package]]
 name = "tessera-i18n"
 version = "0.1.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "fluent-bundle",
  "fluent-templates",
@@ -3469,8 +3469,8 @@ dependencies = [
 
 [[package]]
 name = "tessera-macros"
-version = "0.4.4"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+version = "1.0.0"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "heck",
  "proc-macro2",
@@ -3481,7 +3481,7 @@ dependencies = [
 [[package]]
 name = "tessera-platform"
 version = "0.1.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "arboard",
  "objc2 0.6.5",
@@ -3512,8 +3512,8 @@ dependencies = [
 
 [[package]]
 name = "tessera-ui"
-version = "2.5.0"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+version = "3.0.0"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "accesskit",
  "bumpalo",
@@ -3562,7 +3562,7 @@ dependencies = [
 [[package]]
 name = "tessera-winit"
 version = "0.30.13"
-source = "git+https://github.com/tessera-ui/tessera?rev=693f4dd757f2aced1c758228cfa985be46b4ce8c#693f4dd757f2aced1c758228cfa985be46b4ce8c"
+source = "git+https://github.com/tessera-ui/tessera?rev=984632147fe84b84266af0e1b642eda5ffa9f3a0#984632147fe84b84266af0e1b642eda5ffa9f3a0"
 dependencies = [
  "ahash",
  "atomic-waker",
